@@ -105,7 +105,8 @@ function currencySymbol(c){return c==="USD"?"$":c==="EUR"?"€":"₽"}
 function formatPrice(v,c){return v===""||v==null?"":formatNumber(v)+" "+currencySymbol(c)}
 function safeFileName(n){let r=String(n||"Коммерческое предложение").replace(/[<>:"/\\|?*\x00-\x1F]/g," ").replace(/\s+/g," ").trim()||"Коммерческое предложение";return r+", предложение от АЛЬФАПРОМ"}
 function parseSpecs(text){const lines=String(text||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean),rows=[];for(const line of lines){const tab=line.split(/\t+/);if(tab.length>=2){rows.push([tab.shift().trim(),tab.join(" ").trim()]);continue}const colon=line.indexOf(":");if(colon>0){rows.push([line.slice(0,colon).trim(),line.slice(colon+1).trim()]);continue}rows.push([line,""])}if(rows.length>1&&rows.filter(r=>!r[1]).length===rows.length){const paired=[];for(let i=0;i<rows.length;i+=2)paired.push([rows[i][0],rows[i+1]?rows[i+1][0]:""]);return paired}return rows}
-function createSpecsTable(p){const rows=parseSpecs(p.specsText);if(!rows.length)return"";return`<table class="specs-table"><thead><tr><th colspan="2">Характеристики</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHtml(r[0])}</td><td>${escapeHtml(r[1])}</td></tr>`).join("")}</tbody></table>`}
+function createSpecsTable(p){const rows=parseSpecs(p.specsText);if(!rows.length)return"";return createSpecsTableFromRows(rows)}
+function createSpecsTableFromRows(rows){return`<table class="specs-table"><thead><tr><th colspan="2">Характеристики</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHtml(r[0])}</td><td>${escapeHtml(r[1])}</td></tr>`).join("")}</tbody></table>`}
 function renderProductsEditor(){const c=document.getElementById("productsEditor");c.innerHTML="";state.products.forEach((p,i)=>{p.photoIds=Array.isArray(p.photoIds)?p.photoIds:[];ensurePhotoSizes(p);const card=document.createElement("div");card.className="product-editor-card";card.dataset.productId=p.id;card.innerHTML=`<div class="product-editor-head"><div class="product-editor-title">Оборудование <span class="product-number">№${i+1}</span></div>${state.products.length>1?`<button class="remove-product-btn" data-remove-product="${p.id}">Удалить оборудование</button>`:""}</div><div class="field"><label>Название оборудования</label><input type="text" data-field="productName" value="${escapeAttr(p.productName)}" placeholder="Например: Вакуумный упаковщик DZ-900"></div><div class="photo-editor"><div class="field" style="margin-bottom:6px"><label>Фотографии оборудования</label></div><div class="photo-editor-grid" data-photo-grid="${p.id}"></div><input type="file" class="file-input" accept="image/*" multiple data-photo-input="${p.id}"><div class="photo-actions"><button class="small-btn" type="button" data-choose-photo="${p.id}">＋ Добавить фото</button></div></div><div class="field"><label>Описание</label><textarea data-field="description" placeholder="Описание оборудования...">${escapeHtml(p.description)}</textarea></div><div class="field"><label>Характеристики</label><textarea class="specs-textarea" data-field="specsText" placeholder="Вставьте характеристики одним блоком.\n\nНапример:\nПроизводительность\nдо 6 циклов/мин\nДлина планки\n800 мм\nШирина планки\n600 мм\nМощность\n3 кВт">${escapeHtml(p.specsText)}</textarea></div><div class="field"><label>Дополнительная информация</label><textarea data-field="note" placeholder="Примечание...">${escapeHtml(p.note)}</textarea></div><div class="field"><label>Видео оборудования</label><input type="url" data-field="videoUrl" value="${escapeAttr(p.videoUrl)}" placeholder="https://..."></div><div class="two-cols"><div class="field"><label>Цена</label><input type="number" min="0" step="0.01" data-field="price" value="${escapeAttr(p.price)}" placeholder="0"></div><div class="field"><label>Валюта</label><select data-field="currency"><option value="RUB" ${p.currency==="RUB"?"selected":""}>₽ RUB</option><option value="USD" ${p.currency==="USD"?"selected":""}>$ USD</option><option value="EUR" ${p.currency==="EUR"?"selected":""}>€ EUR</option></select></div></div><div class="field"><label>Цена со скидкой</label><input type="number" min="0" step="0.01" data-field="discountPrice" value="${escapeAttr(p.discountPrice)}" placeholder="Если скидки нет — оставьте пустым"></div><div class="field"><label>Наличие</label><div class="status-buttons"><button type="button" class="status-button ${p.status==="available"?"active":""}" data-status="available" data-product-status="${p.id}">В наличии</button><button type="button" class="status-button ${p.status==="order"?"active":""}" data-status="order" data-product-status="${p.id}">Под заказ</button></div></div><div class="field"><label>Комментарий к цене</label><input type="text" data-field="priceComment" value="${escapeAttr(p.priceComment)}" placeholder="Например: Цена указана с НДС"></div>`;c.appendChild(card);renderEditorPhotos(p)});bindProductEditorEvents()}
 async function renderEditorPhotos(p){
   const grid=document.querySelector(`[data-photo-grid="${p.id}"]`);
@@ -383,7 +384,7 @@ function bindProductEditorEvents(){document.querySelectorAll(".product-editor-ca
 async function handlePhotos(p,files){const valid=files.filter(f=>f?.type?.startsWith("image/"));if(!valid.length){alert("Можно загружать только изображения.");return}const ids=[];try{for(const f of valid){const id=await savePhoto(await preparePhoto(f));ids.push(id);p.photoSizes[id]=DEFAULT_PHOTO_SIZE_MM}p.photoIds.push(...ids);saveState();renderProductsEditor();renderPreview()}catch(e){for(const id of ids)await deletePhoto(id).catch(()=>{});alert("Не удалось сохранить фотографию.\n\n"+(e.message||"Попробуйте выбрать изображение ещё раз."))}}
 async function getPhotoDataUrl(id){const b=await getPhoto(id);if(!b)return"";return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)})}
 async function getProductPhotosData(p){const out=[];for(const id of p.photoIds||[]){try{const dataUrl=await getPhotoDataUrl(id);if(dataUrl)out.push({photoId:id,dataUrl})}catch(e){}}return out}
-function blockHtml(p,index,photos){const blocks=[];blocks.push(`<div class="kp-title">Коммерческое предложение</div>`);blocks.push(`<div class="kp-product-name">${escapeHtml(p.productName||`Оборудование №${index+1}`)}</div>`);if(photos.length)blocks.push(`<div class="product-photo-grid">${photos.map((ph,i)=>{const s=getPhotoSize(p,ph.photoId);return`<div class="product-photo-frame" style="width:${s}mm;height:${s}mm"><img src="${ph.dataUrl}" alt="Оборудование ${i+1}"></div>`}).join("")}</div>`);if(p.description.trim())blocks.push(`<div class="kp-description">${escapeHtml(p.description)}</div>`);const specs=createSpecsTable(p);if(specs)blocks.push(specs);if(p.note.trim())blocks.push(`<div class="kp-note">${escapeHtml(p.note)}</div>`);if(p.videoUrl.trim())blocks.push(`<a class="video-button" href="${escapeAttr(p.videoUrl)}" target="_blank" rel="noopener">Смотреть видео оборудования</a>`);const price=formatPrice(p.price,p.currency),disc=formatPrice(p.discountPrice,p.currency);if(price||disc)blocks.push(`<div class="price-block">${price?`<div class="price-line">Цена: ${price}</div>`:""}${disc?`<div class="price-line discount">Цена со скидкой: ${disc}</div>`:""}</div>`);blocks.push(`<div class="availability ${p.status==="order"?"order":"available"}">${p.status==="order"?"Под заказ":"В наличии"}</div>`);if(p.priceComment.trim())blocks.push(`<div class="price-comment">${escapeHtml(p.priceComment)}</div>`);return blocks}
+function blockHtml(p,index,photos){const blocks=[];blocks.push(`<div class="kp-title">Коммерческое предложение</div>`);blocks.push(`<div class="kp-product-name">${escapeHtml(p.productName||`Оборудование №${index+1}`)}</div>`);if(photos.length)blocks.push(`<div class="product-photo-grid">${photos.map((ph,i)=>{const s=getPhotoSize(p,ph.photoId);return`<div class="product-photo-frame" style="width:${s}mm;height:${s}mm"><img src="${ph.dataUrl}" alt="Оборудование ${i+1}"></div>`}).join("")}</div>`);if(p.description.trim())blocks.push(`<div class="kp-description splittable-description" data-splittable="description">${escapeHtml(p.description)}</div>`);const specs=createSpecsTable(p);if(specs)blocks.push(specs.replace('<table class="specs-table">','<table class="specs-table splittable-specs" data-splittable="specs">'));if(p.note.trim())blocks.push(`<div class="kp-note">${escapeHtml(p.note)}</div>`);if(p.videoUrl.trim())blocks.push(`<a class="video-button" href="${escapeAttr(p.videoUrl)}" target="_blank" rel="noopener">Смотреть видео оборудования</a>`);const price=formatPrice(p.price,p.currency),disc=formatPrice(p.discountPrice,p.currency);if(price||disc)blocks.push(`<div class="price-block">${price?`<div class="price-line">Цена: ${price}</div>`:""}${disc?`<div class="price-line discount">Цена со скидкой: ${disc}</div>`:""}</div>`);blocks.push(`<div class="availability ${p.status==="order"?"order":"available"}">${p.status==="order"?"Под заказ":"В наличии"}</div>`);if(p.priceComment.trim())blocks.push(`<div class="price-comment">${escapeHtml(p.priceComment)}</div>`);return blocks}
 function headerHtml(){const logo=state.companyLogo||LOGO_DATA,phone=state.companyPhone||DEFAULT_BRANDING.companyPhone,site=state.companySite||DEFAULT_BRANDING.companySite;return`<div class="kp-header"><img class="kp-logo" src="${escapeAttr(logo)}" alt="${escapeAttr(state.companyName||"Логотип")}"><div class="kp-header-right"><div class="kp-header-phone">${escapeHtml(phone)}</div><a class="kp-header-site" href="${escapeAttr(site)}" target="_blank" rel="noopener">${escapeHtml(siteLabel(site))}</a></div></div>`}
 function footerHtml(){const name=state.companyName||DEFAULT_BRANDING.companyName,phone=state.companyPhone||DEFAULT_BRANDING.companyPhone,site=state.companySite||DEFAULT_BRANDING.companySite;return`<div class="kp-footer"><div class="footer-left">${escapeHtml(name)}<br>Оборудование для пищевого производства и упаковки</div><div class="footer-right">${state.managerName.trim()?`<div class="footer-manager">${escapeHtml(state.managerName)}</div>`:""}${state.managerPhone.trim()?`<div>${escapeHtml(state.managerPhone)}</div>`:""}<div>${escapeHtml(phone)}</div><div>${escapeHtml(siteLabel(site))}</div></div></div>`}
 function advantagesHtml(){return`<div class="advantages"><div class="advantages-title">Почему мы?</div><div class="advantages-grid">${state.advantages.map(x=>`<div class="advantage">${escapeHtml(x)}</div>`).join("")}</div></div>`}
@@ -411,14 +412,6 @@ async function paginateProduct(p,index){
   const photos=await getProductPhotosData(p);
   const blocks=blockHtml(p,index,photos);
 
-  /*
-    "Почему мы?" и футер — единый нижний блок первой страницы.
-    Он НИКОГДА не участвует в переносе и НИКОГДА не переносится.
-    Основной контент занимает только оставшееся место сверху.
-    Если контент не помещается — создаётся следующая страница.
-    На следующей странице есть только футер внизу.
-  */
-
   async function measureAvailable(firstPage){
     const page=document.createElement("div");
     page.className="kp-page has-bottom";
@@ -427,86 +420,157 @@ async function paginateProduct(p,index){
     page.style.top="0";
     page.style.visibility="hidden";
     page.style.boxShadow="none";
-
     page.innerHTML=
-      '<div class="kp-content">' +
-        headerHtml() +
-        (index>0 && !firstPage
-          ? '<div class="page-continuation">Продолжение предложения — оборудование №'+(index+1)+'</div>'
-          : '') +
-        '<div class="measureBlocks"></div>' +
-      '</div>' +
-      '<div class="kp-bottom"><div class="kp-footer-stack">' +
-        (firstPage?advantagesHtml():"") +
-        footerHtml() +
-      '</div></div>';
-
+      '<div class="kp-content">'+headerHtml()+
+      (index>0 && !firstPage?'<div class="page-continuation">Продолжение предложения — оборудование №'+(index+1)+'</div>':'')+
+      '<div class="measureBlocks"></div></div>'+
+      '<div class="kp-bottom"><div class="kp-footer-stack">'+advantagesHtml()+footerHtml()+'</div></div>';
     document.body.appendChild(page);
     await new Promise(r=>requestAnimationFrame(r));
-
     const content=page.querySelector(".kp-content");
     const header=page.querySelector(".kp-header");
     const bottom=page.querySelector(".kp-bottom");
-
-    const cs=getComputedStyle(content);
     const contentTop=header.getBoundingClientRect().bottom;
-    const contentBottom=content.getBoundingClientRect().bottom-parseFloat(cs.paddingBottom||"0");
     const bottomTop=bottom.getBoundingClientRect().top;
-
     const available=Math.max(0,bottomTop-contentTop);
-
     page.remove();
     return available;
   }
 
   const firstAvailable=await measureAvailable(true);
   const nextAvailable=await measureAvailable(true);
-
   const pages=[];
   let current=[];
   let currentHeight=0;
   let pageIndex=0;
 
-  for(const html of blocks){
+  async function measureBlock(html){
     const test=document.createElement("div");
-    test.style.cssText=
-      "position:absolute;left:-100000px;top:0;visibility:hidden;width:180mm;box-sizing:border-box;";
+    test.style.cssText="position:absolute;left:-100000px;top:0;visibility:hidden;width:180mm;box-sizing:border-box;";
     test.innerHTML=html;
     document.body.appendChild(test);
-
     await new Promise(r=>requestAnimationFrame(r));
     const h=test.getBoundingClientRect().height;
     test.remove();
+    return h;
+  }
 
+  function descriptionChunk(text){return `<div class="kp-description splittable-description">${escapeHtml(text)}</div>`}
+
+  function specsChunk(rows){return createSpecsTableFromRows(rows).replace('<table class="specs-table">','<table class="specs-table splittable-specs">')}
+
+  async function splitDescription(html,space){
+    const probe=document.createElement("div");
+    probe.innerHTML=html;
+    const text=probe.textContent||"";
+    if(!text)return null;
+    let lo=1,hi=text.length,best=0;
+    while(lo<=hi){
+      const mid=Math.floor((lo+hi)/2);
+      const part=text.slice(0,mid);
+      const h=await measureBlock(descriptionChunk(part));
+      if(h<=space+0.5){best=mid;lo=mid+1}else hi=mid-1;
+    }
+    if(!best)return null;
+    let cut=best;
+    if(best<text.length){
+      const ws=text.lastIndexOf(" ",best);
+      if(ws>Math.floor(best*0.65))cut=ws;
+    }
+    const first=text.slice(0,cut).trimEnd();
+    const rest=text.slice(cut).trimStart();
+    return {first:descriptionChunk(first),rest:rest?descriptionChunk(rest):null};
+  }
+
+  async function splitSpecs(html,space){
+    const box=document.createElement("div");
+    box.innerHTML=html;
+    const rows=[...box.querySelectorAll("tbody tr")].map(tr=>tr.outerHTML);
+    if(!rows.length)return null;
+    let lo=1,hi=rows.length,best=0;
+    while(lo<=hi){
+      const mid=Math.floor((lo+hi)/2);
+      const table='<table class="specs-table splittable-specs">'+box.querySelector("thead").outerHTML+'<tbody>'+rows.slice(0,mid).join("")+'</tbody></table>';
+      const h=await measureBlock(table);
+      if(h<=space+0.5){best=mid;lo=mid+1}else hi=mid-1;
+    }
+    if(!best)return null;
+    const first=rows.slice(0,best);
+    const rest=rows.slice(best);
+    return {first:specsChunk(first),rest:rest.length?specsChunk(rest):null};
+  }
+
+  async function addBlock(html){
     const available=pageIndex===0?firstAvailable:nextAvailable;
+    const remaining=available-currentHeight;
+    const h=await measureBlock(html);
+    if(h<=remaining+0.5){
+      current.push(html);
+      currentHeight+=h;
+      return null;
+    }
 
-    if(current.length && currentHeight+h>available+0.5){
+    const el=document.createElement("div");
+    el.innerHTML=html;
+    const splittable=el.querySelector("[data-splittable]");
+    if(splittable && splittable.dataset.splittable==="description"){
+      const split=await splitDescription(html,Math.max(0,remaining));
+      if(split){
+        if(current.length){
+          current.push(split.first);
+          currentHeight+=await measureBlock(split.first);
+          pages.push(current);
+          current=[];
+          currentHeight=0;
+          pageIndex++;
+        }else{
+          current.push(split.first);
+          currentHeight+=await measureBlock(split.first);
+          pages.push(current);
+          current=[];
+          currentHeight=0;
+          pageIndex++;
+        }
+        return split.rest;
+      }
+    }
+
+    if(splittable && splittable.dataset.splittable==="specs"){
+      const split=await splitSpecs(html,Math.max(0,remaining));
+      if(split){
+        current.push(split.first);
+        currentHeight+=await measureBlock(split.first);
+        pages.push(current);
+        current=[];
+        currentHeight=0;
+        pageIndex++;
+        return split.rest;
+      }
+    }
+
+    if(current.length){
       pages.push(current);
       current=[html];
       currentHeight=h;
       pageIndex++;
-    }else{
-      current.push(html);
-      currentHeight+=h;
+      return null;
+    }
+    current=[html];
+    currentHeight=h;
+    return null;
+  }
+
+  for(let i=0;i<blocks.length;i++){
+    let pending=blocks[i];
+    while(pending){
+      pending=await addBlock(pending);
     }
   }
 
-  if(current.length) pages.push(current);
-  if(!pages.length) pages.push([]);
+  if(current.length)pages.push(current);
+  if(!pages.length)pages.push([]);
 
-  /*
-    ВАЖНО: withAdvantages=true только у первой страницы.
-    Этот блок никогда не создаётся внутри массива content,
-    поэтому он физически не может "переехать" на другую страницу.
-  */
-  return pages.map((arr,i)=>
-    makePage(
-      arr,
-      index,
-      i>0,
-      true
-    )
-  );
+  return pages.map((arr,i)=>makePage(arr,index,i>0,true));
 }
 async function buildAllPages(){const all=[];for(let i=0;i<state.products.length;i++){const pages=await paginateProduct(state.products[i],i);all.push(...pages)}return all}
 function getA4SizePx(){const d=document.createElement("div");d.style.cssText="position:absolute;visibility:hidden;width:210mm;height:297mm";document.body.appendChild(d);const r={width:d.getBoundingClientRect().width,height:d.getBoundingClientRect().height};d.remove();return r}
