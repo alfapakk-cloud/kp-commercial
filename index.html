@@ -123,7 +123,7 @@ function refreshPhotoEditorGrid(p,grid){
   let bottom=24;
   (p.photoIds||[]).forEach(id=>{
     const pos=getPhotoPosition(p,id),size=getPhotoSize(p,id);
-    bottom=Math.max(bottom,pos.y+size+8);
+    bottom=Math.max(bottom,pos.y+size+14);
   });
   grid.style.height=Math.max(24,bottom)+"mm";
 }
