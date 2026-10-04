@@ -485,19 +485,48 @@ async function paginateProduct(p,index){
   async function splitSpecs(html,space){
     const box=document.createElement("div");
     box.innerHTML=html;
-    const rows=[...box.querySelectorAll("tbody tr")].map(tr=>tr.outerHTML);
+
+    // Берём текст ячеек, а не outerHTML строк. Иначе createSpecsTableFromRows()
+    // экранирует теги <tr>/<td>, и после переноса они видны как текст.
+    const rows=[...box.querySelectorAll("tbody tr")].map(tr=>{
+      const cells=[...tr.querySelectorAll("td")];
+      return [
+        cells[0]?.textContent?.trim()||"",
+        cells[1]?.textContent?.trim()||""
+      ];
+    });
+
     if(!rows.length)return null;
+
     let lo=1,hi=rows.length,best=0;
+
     while(lo<=hi){
       const mid=Math.floor((lo+hi)/2);
-      const table='<table class="specs-table splittable-specs">'+box.querySelector("thead").outerHTML+'<tbody>'+rows.slice(0,mid).join("")+'</tbody></table>';
+      const table=createSpecsTableFromRows(rows.slice(0,mid))
+        .replace(
+          '<table class="specs-table">',
+          '<table class="specs-table splittable-specs">'
+        );
+
       const h=await measureBlock(table);
-      if(h<=space+0.5){best=mid;lo=mid+1}else hi=mid-1;
+
+      if(h<=space+0.5){
+        best=mid;
+        lo=mid+1;
+      }else{
+        hi=mid-1;
+      }
     }
+
     if(!best)return null;
+
     const first=rows.slice(0,best);
     const rest=rows.slice(best);
-    return {first:specsChunk(first),rest:rest.length?specsChunk(rest):null};
+
+    return {
+      first:specsChunk(first),
+      rest:rest.length?specsChunk(rest):null
+    };
   }
 
   async function addBlock(html){
