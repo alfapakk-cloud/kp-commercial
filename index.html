@@ -701,7 +701,9 @@ async function downloadPDF(){
 
     for(let i=0;i<pageElements.length;i++){
       const canvas=await window.html2canvas(pageElements[i],{
-        scale:2,
+        // Рендерим страницу в 4x: это заметно повышает резкость
+        // мелкого текста, логотипа, линий и футтера в итоговом PDF.
+        scale:4,
         useCORS:true,
         backgroundColor:"#fff",
         logging:false,
@@ -712,7 +714,8 @@ async function downloadPDF(){
         }
       });
 
-      const imgData=canvas.toDataURL("image/jpeg",.98);
+      // PNG сохраняет резкие края текста и линий без JPEG-сжатия.
+      const imgData=canvas.toDataURL("image/png");
 
       if(i>0){
         pdf.addPage();
@@ -720,13 +723,11 @@ async function downloadPDF(){
 
       pdf.addImage(
         imgData,
-        "JPEG",
+        "PNG",
         0,
         0,
         210,
-        297,
-        undefined,
-        "FAST"
+        297
       );
     }
 
