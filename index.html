@@ -52,13 +52,13 @@
 .kp-footer{flex:none;height:18mm;background:var(--footer-color);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:8mm;padding:3.5mm 15mm}.footer-left{font-size:9px;font-weight:700;line-height:1.3}.footer-right{text-align:right;font-size:9px;line-height:1.35}.footer-manager{font-weight:800}.page-continuation{font-size:9px;color:#777;margin-bottom:2mm}
 /* measurement / PDF */
 #pdfMeasure{position:absolute;left:-100000px;top:0;width:210mm;visibility:hidden;pointer-events:none}.pdf-render-root{width:210mm;background:#fff}.pdf-render-root .kp-page{box-shadow:none}.pdf-render-root .preview-page-shell{display:block!important}
-.auth-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}.auth-modal[hidden]{display:none}.auth-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}.auth-dialog{position:relative;z-index:1;width:min(420px,calc(100vw - 32px));background:#fff;border-radius:14px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.2)}.auth-dialog h2{margin:0 0 16px;font-size:22px}.auth-close{position:absolute;right:12px;top:8px;border:0;background:transparent;font-size:28px;color:#666;cursor:pointer}.auth-tabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid #e1e3e6}.auth-tab{border:0;background:transparent;padding:9px 12px;font-weight:700;color:#6b7280;border-bottom:2px solid transparent}.auth-tab.active{color:var(--orange);border-bottom-color:var(--orange)}.auth-submit{width:100%;margin-top:6px}.auth-error{min-height:20px;margin:8px 0;color:var(--red);font-size:13px;line-height:1.35}.auth-user{font-size:12px;color:#555;display:none}.auth-user.visible{display:inline}.auth-logout{display:none}.auth-logout.visible{display:inline-block}
+.auth-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}.auth-modal[hidden]{display:none}.auth-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}.auth-dialog{position:relative;z-index:1;width:min(420px,calc(100vw - 32px));background:#fff;border-radius:14px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.2)}.auth-dialog h2{margin:0 0 16px;font-size:22px}.auth-close{position:absolute;right:12px;top:8px;border:0;background:transparent;font-size:28px;color:#666;cursor:pointer}.auth-tabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid #e1e3e6}.auth-tab{border:0;background:transparent;padding:9px 12px;font-weight:700;color:#6b7280;border-bottom:2px solid transparent}.auth-tab.active{color:var(--orange);border-bottom-color:var(--orange)}.auth-submit{width:100%;margin-top:6px}.auth-error{min-height:20px;margin:8px 0;color:var(--red);font-size:13px;line-height:1.35}.account-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}.account-modal[hidden]{display:none}.account-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}.account-dialog{position:relative;z-index:1;width:min(440px,calc(100vw - 32px));background:#fff;border-radius:14px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.2)}.account-dialog h2{margin:0 0 6px;font-size:22px}.account-email{color:#6b7280;font-size:13px;margin-bottom:20px}.account-actions{display:flex;flex-direction:column;gap:10px}.account-action{width:100%;text-align:left;padding:12px 14px}.account-close{position:absolute;right:12px;top:8px;border:0;background:transparent;font-size:28px;color:#666;cursor:pointer}.auth-user{font-size:12px;color:#555;display:none}.auth-user.visible{display:inline}.auth-logout{display:none}.auth-logout.visible{display:inline-block}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.editor{border-right:0}.preview-side{min-height:800px}.two-cols{grid-template-columns:1fr}.topbar{height:auto;min-height:62px;padding:10px 14px}.topbar-title{font-size:15px}}
 </style>
 </head>
 <body>
 <div class="app">
-<header class="topbar"><div class="topbar-title">Сервис генерации коммерческих предложений АЛЬФАПРОМ</div><div class="toolbar"><button class="btn" id="authBtn">Войти / Регистрация</button><button class="btn btn-primary" id="downloadPdfBtn">Скачать PDF</button><button class="btn btn-primary" id="downloadDocxBtn">Скачать DOCX</button><button class="btn btn-danger" id="resetBtn">Сбросить</button></div></header>
+<header class="topbar"><div class="topbar-title">Сервис генерации коммерческих предложений АЛЬФАПРОМ</div><div class="toolbar"><button class="btn" id="authBtn">Войти / Регистрация</button><button class="btn" id="accountBtn" hidden>Мой аккаунт</button><button class="btn btn-primary" id="downloadPdfBtn">Скачать PDF</button><button class="btn btn-primary" id="downloadDocxBtn">Скачать DOCX</button><button class="btn btn-danger" id="resetBtn">Сбросить</button></div></header>
 <div class="auth-modal" id="authModal" hidden>
   <div class="auth-backdrop" id="authBackdrop"></div>
   <div class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authTitle">
@@ -71,7 +71,7 @@
     <button class="btn btn-primary auth-submit" id="authSubmit" type="button">Войти</button>
   </div>
 </div>
-<main class="layout">
+<div class="account-modal" id="accountModal" hidden><div class="account-backdrop" id="accountBackdrop"></div><div class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="accountTitle"><button class="account-close" id="accountClose" type="button" aria-label="Закрыть">×</button><h2 id="accountTitle">Мой аккаунт</h2><div class="account-email" id="accountEmail"></div><div class="account-actions"><button class="btn account-action" type="button" id="accountTemplatesBtn">Мои шаблоны</button><button class="btn account-action" type="button" id="accountSettingsBtn">Настройки</button><button class="btn btn-danger account-action" type="button" id="accountLogoutBtn">Выйти</button></div></div></div><main class="layout">
 <section class="editor" id="editor"><div id="productsEditor"></div><button class="add-product-btn" id="addProductBtn">＋ Добавить оборудование</button><div class="editor-section"><h2>Оформление и реквизиты КП</h2><div class="field"><label>Название компании</label><input type="text" id="companyName" placeholder="Например: АЛЬФАПРОМ"></div><div class="field"><label>Короткое описание компании</label><input type="text" id="companyDescription" placeholder="Например: Оборудование для пищевого производства и упаковки"></div><div class="two-cols"><div class="field"><label>Телефон компании</label><input type="tel" id="companyPhone" placeholder="+7 (___) ___-__-__"></div><div class="field"><label>Сайт компании</label><input type="url" id="companySite" placeholder="https://example.ru"></div></div><div class="field"><label>Логотип компании</label><input type="file" id="companyLogoInput" accept="image/*"><img id="companyLogoPreview" style="display:none;max-width:180px;max-height:70px;margin-top:8px;border:1px solid #d9dce1;border-radius:7px;padding:5px;object-fit:contain" alt="Логотип"></div><div class="two-cols"><div class="field"><label>Основной цвет КП</label><input type="color" id="primaryColor" style="width:48px;height:38px"></div><div class="field"><label>Цвет шапки</label><input type="color" id="headerColor" style="width:48px;height:38px"></div><div class="field"><label>Цвет футера</label><input type="color" id="footerColor" style="width:48px;height:38px"></div><div class="field"><label>Цвет комментария к цене</label><input type="color" id="priceCommentColor" style="width:48px;height:38px"></div></div><div class="field"><label>Пять преимуществ</label><div id="advantagesEditor"></div></div></div><div class="editor-section"><h2>Информация о менеджере</h2><div class="two-cols"><div class="field"><label>Имя менеджера</label><input type="text" id="managerName" placeholder="Имя менеджера"></div><div class="field"><label>Телефон</label><input type="tel" id="managerPhone" placeholder="+7 (___) ___-__-__"></div></div></div></section>
 <section class="preview-side"><div class="preview-title">Предварительный просмотр</div><div class="preview-scroll" id="previewScroll"><div class="preview-pages" id="previewPages"></div></div></section>
 </main></div>
@@ -2140,6 +2140,14 @@ const authEmail=document.getElementById("authEmail");
 const authPassword=document.getElementById("authPassword");
 const authError=document.getElementById("authError");
 const authSubmit=document.getElementById("authSubmit");
+const accountBtn=document.getElementById("accountBtn");
+const accountModal=document.getElementById("accountModal");
+const accountBackdrop=document.getElementById("accountBackdrop");
+const accountClose=document.getElementById("accountClose");
+const accountEmail=document.getElementById("accountEmail");
+const accountTemplatesBtn=document.getElementById("accountTemplatesBtn");
+const accountSettingsBtn=document.getElementById("accountSettingsBtn");
+const accountLogoutBtn=document.getElementById("accountLogoutBtn");
 let authMode="login";
 let currentUser=null;
 
@@ -2221,11 +2229,15 @@ function updateAuthUI(){
     authBtn.classList.remove("btn-primary");
     authBtn.classList.add("btn");
     authBtn.title="Нажмите, чтобы выйти";
+    accountBtn.hidden=false;
+    accountEmail.textContent=currentUser.email;
   }else{
     authBtn.textContent="Войти / Регистрация";
     authBtn.classList.add("btn");
     authBtn.classList.remove("btn-primary");
     authBtn.title="";
+    accountBtn.hidden=true;
+    accountModal.hidden=true;
   }
 }
 async function logout(){
@@ -2250,6 +2262,12 @@ registerTab.onclick=()=>setAuthMode("register");
 authSubmit.onclick=()=>authRequest(authMode==="register"?"/api/register":"/api/login");
 authClose.onclick=closeAuthModal;
 authBackdrop.onclick=closeAuthModal;
+accountBtn.onclick=()=>{if(currentUser)accountModal.hidden=false};
+accountClose.onclick=()=>accountModal.hidden=true;
+accountBackdrop.onclick=()=>accountModal.hidden=true;
+accountTemplatesBtn.onclick=()=>alert("Раздел «Мои шаблоны» будет доступен следующим этапом.");
+accountSettingsBtn.onclick=()=>{accountModal.hidden=true;document.getElementById("companyName")?.scrollIntoView({behavior:"smooth",block:"start"})};
+accountLogoutBtn.onclick=async()=>{accountModal.hidden=true;await logout()};
 authPassword.addEventListener("keydown",e=>{if(e.key==="Enter")authSubmit.click()});
 
 document.getElementById("downloadPdfBtn").onclick=downloadPDF;
