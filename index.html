@@ -168,7 +168,7 @@ function saveRemoteSettingsDebounced(){
 async function saveRemoteSettings(){
   if(remoteSaveInFlight)return;
   try{
-    const meResponse=await fetch(API_BASE+"/api/me",{method:"GET",credentials:"include"});
+    const meResponse=await authFetch("/api/me",{method:"GET"});
     if(!meResponse.ok)return;
     const me=await meResponse.json();
     if(!me?.authenticated)return;
