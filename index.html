@@ -143,7 +143,49 @@ function refreshPhotoEditorGrid(p,grid){
 function getPhotoSize(p,id){ensurePhotoSizes(p);let n=Number(p.photoSizes[id]);if(!Number.isFinite(n))n=DEFAULT_PHOTO_SIZE_MM;return Math.max(MIN_PHOTO_SIZE_MM,Math.min(MAX_PHOTO_SIZE_MM,Math.round(n)))}
 function setPhotoSize(p,id,n){ensurePhotoSizes(p);n=Math.max(MIN_PHOTO_SIZE_MM,Math.min(MAX_PHOTO_SIZE_MM,Math.round(n)));p.photoSizes[id]=n;return n}
 function loadState(){let saved=null;try{saved=JSON.parse(localStorage.getItem(STORAGE_KEY))}catch(e){}if(!saved)for(const k of OLD_KEYS){try{const x=JSON.parse(localStorage.getItem(k));if(x){saved=x;break}}catch(e){}}if(!saved)return;if(Array.isArray(saved.products))state.products=saved.products.map(p=>({...createProduct(),...p,photoIds:Array.isArray(p.photoIds)?p.photoIds:[],photoSizes:p.photoSizes&&typeof p.photoSizes==="object"&&!Array.isArray(p.photoSizes)?p.photoSizes:{},photoPositions:p.photoPositions&&typeof p.photoPositions==="object"&&!Array.isArray(p.photoPositions)?p.photoPositions:{}}));else if(saved.productName!==undefined||saved.description!==undefined||saved.price!==undefined){const p=createProduct();["productName","description","note","price","discountPrice","currency","status","priceComment","specsText","videoUrl"].forEach(k=>{if(saved[k]!==undefined)p[k]=saved[k]});state.products=[p]}if(!state.products.length)state.products=[createProduct()];state.managerName=saved.managerName||"";state.managerPhone=saved.managerPhone||"";state.advantages=Array.isArray(saved.advantages)&&saved.advantages.length===5?saved.advantages.slice(0,5):DEFAULT_ADVANTAGES.slice();Object.keys(DEFAULT_BRANDING).forEach(k=>{state[k]=saved[k]??DEFAULT_BRANDING[k]})}
-function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify({products:state.products,managerName:state.managerName,managerPhone:state.managerPhone,advantages:state.advantages,companyName:state.companyName,companyDescription:state.companyDescription,companyPhone:state.companyPhone,companySite:state.companySite,companyLogo:state.companyLogo,primaryColor:state.primaryColor,headerColor:state.headerColor,footerColor:state.footerColor,priceCommentColor:state.priceCommentColor}))}
+function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify({products:state.products,managerName:state.managerName,managerPhone:state.managerPhone,advantages:state.advantages,companyName:state.companyName,companyDescription:state.companyDescription,companyPhone:state.companyPhone,companySite:state.companySite,companyLogo:state.companyLogo,primaryColor:state.primaryColor,headerColor:state.headerColor,footerColor:state.footerColor,priceCommentColor:state.priceCommentColor}));saveRemoteSettingsDebounced()}
+
+let remoteSaveTimer=null;
+let remoteSaveInFlight=false;
+function getRemoteSettingsPayload(){
+  return {
+    company_name:state.companyName,
+    company_description:state.companyDescription,
+    company_phone:state.companyPhone,
+    company_site:state.companySite,
+    logo_url:state.companyLogo,
+    primary_color:state.primaryColor,
+    header_color:state.headerColor,
+    footer_color:state.footerColor,
+    price_comment_color:state.priceCommentColor,
+    advantages:Array.isArray(state.advantages)?state.advantages.slice(0,5):[]
+  };
+}
+function saveRemoteSettingsDebounced(){
+  clearTimeout(remoteSaveTimer);
+  remoteSaveTimer=setTimeout(saveRemoteSettings,350);
+}
+async function saveRemoteSettings(){
+  if(remoteSaveInFlight)return;
+  try{
+    const meResponse=await fetch(API_BASE+"/api/me",{method:"GET",credentials:"include"});
+    if(!meResponse.ok)return;
+    const me=await meResponse.json();
+    if(!me?.authenticated)return;
+    remoteSaveInFlight=true;
+    const response=await fetch(API_BASE+"/api/settings",{
+      method:"PUT",
+      credentials:"include",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(getRemoteSettingsPayload())
+    });
+    if(!response.ok)console.warn("API settings save failed:",response.status);
+  }catch(error){
+    console.warn("API settings save failed:",error);
+  }finally{
+    remoteSaveInFlight=false;
+  }
+}
 function escapeHtml(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
 function escapeAttr(v){return escapeHtml(v)}
 function safeColor(v,fallback){return /^#[0-9a-fA-F]{6}$/.test(String(v||""))?String(v):fallback}
