@@ -173,9 +173,8 @@ async function saveRemoteSettings(){
     const me=await meResponse.json();
     if(!me?.authenticated)return;
     remoteSaveInFlight=true;
-    const response=await fetch(API_BASE+"/api/settings",{
+    const response=await authFetch("/api/settings",{
       method:"PUT",
-      credentials:"include",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(getRemoteSettingsPayload())
     });
@@ -2029,12 +2028,27 @@ async function downloadDOCX(){
 
   }
 }const API_BASE="https://kp-commercial-api.alfapakk.workers.dev";
+const AUTH_TOKEN_KEY="kpCommercialAuthToken";
+function getAuthToken(){
+  try{return localStorage.getItem(AUTH_TOKEN_KEY)||""}catch(error){return ""}
+}
+function setAuthToken(token){
+  try{
+    if(token)localStorage.setItem(AUTH_TOKEN_KEY,token);
+    else localStorage.removeItem(AUTH_TOKEN_KEY);
+  }catch(error){}
+}
+function authFetch(path,options={}){
+  const headers=new Headers(options.headers||{});
+  const token=getAuthToken();
+  if(token)headers.set("Authorization","Bearer "+token);
+  return fetch(API_BASE+path,{...options,headers,credentials:"include"});
+}
 
 async function loadRemoteSettings(){
   try{
-    const meResponse=await fetch(API_BASE+"/api/me",{
-      method:"GET",
-      credentials:"include"
+    const meResponse=await authFetch("/api/me",{
+      method:"GET"
     });
 
     if(!meResponse.ok)return;
@@ -2043,9 +2057,8 @@ async function loadRemoteSettings(){
 
     if(!me?.authenticated)return;
 
-    const settingsResponse=await fetch(API_BASE+"/api/settings",{
-      method:"GET",
-      credentials:"include"
+    const settingsResponse=await authFetch("/api/settings",{
+      method:"GET"
     });
 
     if(!settingsResponse.ok)return;
@@ -2167,14 +2180,14 @@ async function authRequest(path){
   if(password.length<8)return authError.textContent="Пароль должен содержать минимум 8 символов.";
   authSubmit.disabled=true;
   try{
-    const response=await fetch(API_BASE+path,{
+    const response=await authFetch(path,{
       method:"POST",
-      credentials:"include",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({email,password})
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.ok)throw new Error(result.error||"request_failed");
+    if(result.session)setAuthToken(result.session);
     currentUser=result.user||null;
     closeAuthModal();
     await loadRemoteSettings();
@@ -2193,9 +2206,10 @@ async function authRequest(path){
 }
 async function checkAuth(){
   try{
-    const response=await fetch(API_BASE+"/api/me",{credentials:"include"});
+    const response=await authFetch("/api/me",{method:"GET"});
     const result=await response.json().catch(()=>({}));
     currentUser=result?.authenticated?result.user:null;
+    if(!currentUser&&getAuthToken())setAuthToken("");
   }catch(error){
     currentUser=null;
   }
@@ -2216,10 +2230,11 @@ function updateAuthUI(){
 }
 async function logout(){
   try{
-    await fetch(API_BASE+"/api/logout",{method:"POST",credentials:"include"});
+    await authFetch("/api/logout",{method:"POST"});
   }catch(error){
     console.warn("Logout failed:",error);
   }
+  setAuthToken("");
   currentUser=null;
   updateAuthUI();
 }
