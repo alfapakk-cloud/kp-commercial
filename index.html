@@ -1973,8 +1973,95 @@ async function downloadDOCX(){
     b.textContent="Скачать DOCX";
 
   }
-}async function init(){try{await openDB()}catch(e){console.error("IndexedDB error",e)}loadState();applyBranding();renderBrandingEditor();bindBrandingEvents();managerName.value=state.managerName;managerPhone.value=state.managerPhone;renderProductsEditor();await renderPreview();requestAnimationFrame(fitPreviewPages)}
-document.getElementById("downloadPdfBtn").onclick=downloadPDF;document.getElementById("downloadDocxBtn").onclick=downloadDOCX;init();
+}const API_BASE="https://kp-commercial-api.alfapakk.workers.dev";
+
+async function loadRemoteSettings(){
+  try{
+    const meResponse=await fetch(API_BASE+"/api/me",{
+      method:"GET",
+      credentials:"include"
+    });
+
+    if(!meResponse.ok)return;
+
+    const me=await meResponse.json();
+
+    if(!me?.authenticated)return;
+
+    const settingsResponse=await fetch(API_BASE+"/api/settings",{
+      method:"GET",
+      credentials:"include"
+    });
+
+    if(!settingsResponse.ok)return;
+
+    const result=await settingsResponse.json();
+    const remote=result?.settings;
+
+    if(!remote)return;
+
+    const fields=[
+      "companyName",
+      "companyDescription",
+      "companyPhone",
+      "companySite",
+      "logoUrl",
+      "primaryColor",
+      "headerColor",
+      "footerColor",
+      "priceCommentColor"
+    ];
+
+    const mapping={
+      companyName:"company_name",
+      companyDescription:"company_description",
+      companyPhone:"company_phone",
+      companySite:"company_site",
+      logoUrl:"logo_url",
+      primaryColor:"primary_color",
+      headerColor:"header_color",
+      footerColor:"footer_color",
+      priceCommentColor:"price_comment_color"
+    };
+
+    fields.forEach(field=>{
+      const remoteKey=mapping[field];
+      if(remote[remoteKey]!==null&&remote[remoteKey]!==undefined){
+        if(field==="logoUrl"){
+          state.companyLogo=remote[remoteKey];
+        }else{
+          state[field]=remote[remoteKey];
+        }
+      }
+    });
+
+    if(Array.isArray(remote.advantages)&&remote.advantages.length===5){
+      state.advantages=remote.advantages.slice(0,5);
+    }
+
+    saveState();
+  }catch(error){
+    console.warn("API settings load failed:",error);
+  }
+}
+
+async function init(){
+  try{await openDB()}catch(e){console.error("IndexedDB error",e)}
+  loadState();
+  await loadRemoteSettings();
+  applyBranding();
+  renderBrandingEditor();
+  bindBrandingEvents();
+  managerName.value=state.managerName;
+  managerPhone.value=state.managerPhone;
+  renderProductsEditor();
+  await renderPreview();
+  requestAnimationFrame(fitPreviewPages);
+}
+
+document.getElementById("downloadPdfBtn").onclick=downloadPDF;
+document.getElementById("downloadDocxBtn").onclick=downloadDOCX;
+init();
 </script>
 </body>
 </html>
