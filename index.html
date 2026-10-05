@@ -58,7 +58,7 @@
 </head>
 <body>
 <div class="app">
-<header class="topbar"><div class="topbar-title">Сервис генерации коммерческих предложений АЛЬФАПРОМ</div><div class="toolbar"><button class="btn" id="authBtn">Войти / Регистрация</button><button class="btn" id="accountBtn" hidden>Мой аккаунт</button><button class="btn btn-primary" id="downloadPdfBtn">Скачать PDF</button><button class="btn btn-primary" id="downloadDocxBtn">Скачать DOCX</button><button class="btn btn-danger" id="resetBtn">Сбросить</button></div></header>
+<header class="topbar"><div class="topbar-title">Сервис генерации коммерческих предложений АЛЬФАПРОМ</div><div class="toolbar"><button class="btn" id="authBtn">Сохранить настройки / Войти</button><button class="btn" id="accountBtn" hidden>Мой аккаунт</button><button class="btn btn-primary" id="downloadPdfBtn">Скачать PDF</button><button class="btn btn-primary" id="downloadDocxBtn">Скачать DOCX</button><button class="btn btn-danger" id="resetBtn">Сбросить</button></div></header>
 <div class="auth-modal" id="authModal" hidden>
   <div class="auth-backdrop" id="authBackdrop"></div>
   <div class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authTitle">
@@ -2236,7 +2236,7 @@ function updateAuthUI(){
     accountBtn.hidden=false;
     accountEmail.textContent=currentUser.email;
   }else{
-    authBtn.textContent="Войти / Регистрация";
+    authBtn.textContent="Сохранить настройки / Войти";
     authBtn.classList.add("btn");
     authBtn.classList.remove("btn-primary");
     authBtn.title="";
