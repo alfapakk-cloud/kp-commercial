@@ -2332,8 +2332,7 @@ authPassword.addEventListener("keydown",e=>{if(e.key==="Enter")authSubmit.click(
 
 document.getElementById("downloadPdfBtn").onclick=downloadPDF;
 document.getElementById("downloadDocxBtn").onclick=downloadDOCX;
-init();
-renderAccountPage();
+init().then(renderAccountPage);
 </script>
 </body>
 </html>
