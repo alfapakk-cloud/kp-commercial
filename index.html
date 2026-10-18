@@ -2268,6 +2268,9 @@ function authErrorText(error){
     password_too_short:"Пароль должен содержать минимум 8 символов.",
     email_already_registered:"Этот email уже зарегистрирован.",
     invalid_credentials:"Неверный email или пароль.",
+    login_lookup_error:"Сервер не смог прочитать данные аккаунта. Попробуйте ещё раз и сообщите этот код: login_lookup_error.",
+    login_verification_error:"Сбой проверки пароля на сервере. Пароль не менялся. Сообщите этот код: login_verification_error.",
+    login_session_error:"Пароль принят, но сервер не смог создать сессию. Сообщите этот код: login_session_error.",
     internal_error:"Ошибка сервера. Попробуйте ещё раз."
   };
   return map[error]||"Не удалось выполнить операцию. Попробуйте ещё раз.";
