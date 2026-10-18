@@ -1,0 +1,10 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kp-commercial",
+      "database_id": "87025768-4115-44cb-bf27-7280f2af3b9b"
+    }
+  ]
+}
