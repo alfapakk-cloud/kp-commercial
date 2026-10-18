@@ -54,6 +54,38 @@
 #pdfMeasure{position:absolute;left:-100000px;top:0;width:210mm;visibility:hidden;pointer-events:none}.pdf-render-root{width:210mm;background:#fff}.pdf-render-root .kp-page{box-shadow:none}.pdf-render-root .preview-page-shell{display:block!important}
 .auth-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}.auth-modal[hidden]{display:none}.auth-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}.auth-dialog{position:relative;z-index:1;width:min(420px,calc(100vw - 32px));background:#fff;border-radius:14px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.2)}.auth-dialog h2{margin:0 0 16px;font-size:22px}.auth-close{position:absolute;right:12px;top:8px;border:0;background:transparent;font-size:28px;color:#666;cursor:pointer}.auth-tabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid #e1e3e6}.auth-tab{border:0;background:transparent;padding:9px 12px;font-weight:700;color:#6b7280;border-bottom:2px solid transparent}.auth-tab.active{color:var(--orange);border-bottom-color:var(--orange)}.auth-submit{width:100%;margin-top:6px}.auth-error{min-height:20px;margin:8px 0;color:var(--red);font-size:13px;line-height:1.35}.account-page{flex:1;min-height:0;overflow:auto;background:#f5f6f8;padding:32px 22px 48px}.account-page[hidden]{display:none}.account-page-inner{width:min(1040px,100%);margin:0 auto}.account-page-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}.account-page-top h1{margin:0;font-size:28px;letter-spacing:-.5px}.account-page-subtitle{margin:7px 0 0;color:#6b7280;font-size:14px}.account-user-chip{max-width:100%;overflow-wrap:anywhere;padding:9px 13px;background:#fff;border:1px solid #e5e7eb;border-radius:999px;color:#4b5563;font-size:13px}.account-welcome{padding:25px 27px;background:#fff;border:1px solid #e5e7eb;border-radius:16px;margin-bottom:22px}.account-welcome h2{margin:0 0 8px;font-size:21px}.account-welcome p{margin:0;color:#6b7280;line-height:1.55}.account-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}.account-nav-card{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:155px;padding:20px;text-align:left;color:inherit;text-decoration:none;background:#fff;border:1px solid #e5e7eb;border-radius:14px;transition:border-color .15s,transform .15s,box-shadow .15s}.account-nav-card:hover{border-color:#ffb66b;box-shadow:0 5px 18px rgba(31,41,55,.06);transform:translateY(-1px)}.account-card-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#fff1e3;font-size:20px}.account-card-title{font-weight:700;font-size:15px}.account-card-description{font-size:13px;line-height:1.45;color:#6b7280}.account-page-back{margin-bottom:22px;padding:8px 0;border:0;background:transparent;color:#555;font-size:14px}.account-page-back:hover{color:#d96d00}.account-panel{padding:25px;background:#fff;border:1px solid #e5e7eb;border-radius:16px}.account-panel h2{margin:0 0 6px;font-size:22px}.account-panel-intro{margin:0 0 22px;color:#6b7280;font-size:14px;line-height:1.5}.account-detail-list{max-width:680px}.account-detail-row{display:grid;grid-template-columns:190px minmax(0,1fr);gap:16px;padding:16px 0;border-bottom:1px solid #edf0f2}.account-detail-row:last-child{border-bottom:0}.account-detail-label{font-size:13px;color:#6b7280}.account-detail-value{font-size:14px;font-weight:600;overflow-wrap:anywhere}.account-status{display:inline-flex;align-items:center;gap:7px}.account-status-dot{width:8px;height:8px;border-radius:50%;background:#16a34a}.account-info-note{margin-top:22px;padding:15px 16px;background:#fff8f1;border:1px solid #ffe1c2;border-radius:12px;color:#754313;font-size:13px;line-height:1.5}.account-coming-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}.account-coming-item{padding:15px;border:1px solid #e5e7eb;border-radius:12px}.account-coming-item strong{display:block;margin-bottom:5px;font-size:14px}.account-coming-item span{font-size:13px;line-height:1.45;color:#6b7280}.app.account-view #downloadPdfBtn,.app.account-view #downloadDocxBtn,.app.account-view #resetBtn{display:none}.account-editor-btn{display:none}.app.account-view #accountEditorBtn{display:inline-block}.app.account-view .topbar-title{cursor:pointer}.app.account-view .layout{display:none}@media(max-width:760px){.account-page{padding:22px 14px 36px}.account-page-top{align-items:flex-start;flex-direction:column}.account-page-top h1{font-size:24px}.account-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.account-nav-card{padding:15px;min-height:150px}.account-panel{padding:18px}.account-detail-row{grid-template-columns:1fr;gap:6px}.account-coming-grid{grid-template-columns:1fr}}@media(max-width:430px){.account-card-grid{grid-template-columns:1fr}.account-nav-card{min-height:0}.account-page-top h1{font-size:22px}}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.editor{border-right:0}.preview-side{min-height:800px}.two-cols{grid-template-columns:1fr}.topbar{height:auto;min-height:62px;padding:10px 14px}.topbar-title{font-size:15px}}
+.mobile-actionbar{display:none}
+@media(max-width:760px){
+  .app{height:100vh;height:100dvh}
+  .topbar{align-items:flex-start;gap:8px;padding:9px 12px}
+  .topbar-title{flex:1 1 100%;font-size:14px;line-height:1.25}
+  .toolbar{width:100%;justify-content:flex-end;gap:6px}
+  .toolbar .btn{padding:8px 10px;font-size:13px}
+  #downloadPdfBtn,#downloadDocxBtn,#resetBtn{display:none}
+  .layout{display:block;min-height:0;overflow:hidden}
+  .editor{height:100%;padding:12px 12px 88px;border-right:0}
+  .editor-section,.product-editor-card{padding:14px}
+  .editor-section h2{font-size:17px}
+  input[type=text],input[type=tel],input[type=number],input[type=url],textarea,select{min-height:44px}
+  .status-button,.small-btn,.remove-product-btn{min-height:42px}
+  .preview-side{height:100%;min-height:0}
+  .preview-scroll{padding:10px 10px 86px}
+  .app:not(.mobile-preview-mode) .preview-side{display:none}
+  .app.mobile-preview-mode .editor{display:none}
+  .mobile-actionbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:110;
+    display:flex;gap:8px;padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+    background:#fff;border-top:1px solid #e2e5e9;
+    box-shadow:0 -3px 14px rgba(0,0,0,.08)
+  }
+  .mobile-actionbar .btn{flex:1;min-height:46px;padding:9px 8px;font-size:13px}
+  .mobile-actionbar .btn-primary{font-weight:700}
+  .app.account-view .mobile-actionbar{display:none}
+}
+@media(max-width:760px) and (orientation:landscape){
+  .mobile-actionbar{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
+  .mobile-actionbar .btn{min-height:40px}
+}
 </style>
 </head>
 <body>
@@ -75,7 +107,7 @@
 <main class="layout">
 <section class="editor" id="editor"><div id="productsEditor"></div><button class="add-product-btn" id="addProductBtn">＋ Добавить оборудование</button><div class="editor-section"><h2>Оформление и реквизиты КП</h2><div class="field"><label>Название компании</label><input type="text" id="companyName" placeholder="Например: АЛЬФАПРОМ"></div><div class="field"><label>Короткое описание компании</label><input type="text" id="companyDescription" placeholder="Например: Оборудование для пищевого производства и упаковки"></div><div class="two-cols"><div class="field"><label>Телефон компании</label><input type="tel" id="companyPhone" placeholder="+7 (___) ___-__-__"></div><div class="field"><label>Сайт компании</label><input type="url" id="companySite" placeholder="https://example.ru"></div></div><div class="field"><label>Логотип компании</label><input type="file" id="companyLogoInput" accept="image/*"><img id="companyLogoPreview" style="display:none;max-width:180px;max-height:70px;margin-top:8px;border:1px solid #d9dce1;border-radius:7px;padding:5px;object-fit:contain" alt="Логотип"></div><div class="two-cols"><div class="field"><label>Основной цвет КП</label><input type="color" id="primaryColor" style="width:48px;height:38px"></div><div class="field"><label>Цвет шапки</label><input type="color" id="headerColor" style="width:48px;height:38px"></div><div class="field"><label>Цвет футера</label><input type="color" id="footerColor" style="width:48px;height:38px"></div><div class="field"><label>Цвет комментария к цене</label><input type="color" id="priceCommentColor" style="width:48px;height:38px"></div></div><div class="field"><label>Пять преимуществ</label><div id="advantagesEditor"></div></div></div><div class="editor-section"><h2>Информация о менеджере</h2><div class="two-cols"><div class="field"><label>Имя менеджера</label><input type="text" id="managerName" placeholder="Имя менеджера"></div><div class="field"><label>Телефон</label><input type="tel" id="managerPhone" placeholder="+7 (___) ___-__-__"></div></div></div></section>
 <section class="preview-side"><div class="preview-title">Предварительный просмотр</div><div class="preview-scroll" id="previewScroll"><div class="preview-pages" id="previewPages"></div></div></section>
-</main></div>
+</main><div class="mobile-actionbar" id="mobileActionbar"><button class="btn btn-primary" id="mobileModeToggle" type="button" aria-pressed="false">Предпросмотр</button><button class="btn" id="mobilePdfBtn" type="button">PDF</button><button class="btn" id="mobileDocxBtn" type="button">DOCX</button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2333,6 +2365,16 @@ authPassword.addEventListener("keydown",e=>{if(e.key==="Enter")authSubmit.click(
 
 document.getElementById("downloadPdfBtn").onclick=downloadPDF;
 document.getElementById("downloadDocxBtn").onclick=downloadDOCX;
+const mobileModeToggle=document.getElementById("mobileModeToggle");
+mobileModeToggle.onclick=()=>{
+  const app=document.querySelector(".app");
+  const preview=app.classList.toggle("mobile-preview-mode");
+  mobileModeToggle.textContent=preview?"← К редактору":"Предпросмотр";
+  mobileModeToggle.setAttribute("aria-pressed",String(preview));
+  if(preview)requestAnimationFrame(fitPreviewPages);
+};
+document.getElementById("mobilePdfBtn").onclick=()=>document.getElementById("downloadPdfBtn").click();
+document.getElementById("mobileDocxBtn").onclick=()=>document.getElementById("downloadDocxBtn").click();
 init().then(renderAccountPage);
 </script>
 </body>
