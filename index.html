@@ -762,95 +762,22 @@ async function downloadPDF(){
   const b=document.getElementById("downloadPdfBtn");
   b.disabled=true;
   b.textContent="Формирование PDF...";
-
-  let root=null;
-
   try{
     const pages=await buildAllPages();
-
-    root=document.createElement("div");
-    root.className="pdf-render-root";
-    root.style.position="fixed";
-    root.style.left="0";
-    root.style.top="0";
-    root.style.width="210mm";
-    root.style.visibility="visible";
-    root.style.zIndex="-1";
-    root.innerHTML=pages.join("");
-
-    document.body.appendChild(root);
-
-    root.querySelectorAll(".kp-page").forEach((p,i)=>{
-      p.style.pageBreakAfter="auto";
-      p.style.breakAfter="auto";
-    });
-
-    await new Promise(r=>requestAnimationFrame(r));
-    await new Promise(r=>setTimeout(r,100));
-
-    const pdf=new window.jspdf.jsPDF({
-      unit:"mm",
-      format:"a4",
-      orientation:"portrait"
-    });
-
-    const pageElements=[...root.querySelectorAll(".kp-page")];
-
-    for(let i=0;i<pageElements.length;i++){
-      const canvas=await window.html2canvas(pageElements[i],{
-        // Рендерим страницу в 4x: это заметно повышает резкость
-        // мелкого текста, логотипа, линий и футтера в итоговом PDF.
-        scale:4,
-        useCORS:true,
-        backgroundColor:"#fff",
-        logging:false,
-        onclone:(clonedDoc)=>{
-          clonedDoc
-            .querySelectorAll('img[src^="blob:"]')
-            .forEach(img=>img.remove());
-        }
-      });
-
-      // JPEG 0.94 сохраняет высокую четкость при существенно меньшем размере PDF.
-      const imgData=canvas.toDataURL("image/jpeg",.94);
-
-      if(i>0){
-        pdf.addPage();
-      }
-
-      pdf.addImage(
-        imgData,
-        "JPEG",
-        0,
-        0,
-        210,
-        297,
-        undefined,
-        "MEDIUM"
-      );
-    }
-
-    const filename=safeFileName(
-      state.products[0]?.productName
-    )+".pdf";
-
-    const quotaAllowed=await consumeDownload("pdf");
-    if(!quotaAllowed)return;
-    pdf.save(filename);
-
+    if(!pages.length)throw new Error("Нет страниц для экспорта");
+    const rootStyle=getComputedStyle(document.documentElement);
+    const vars=["--orange","--header-color","--footer-color","--price-comment-color"];
+    const variableCss=":root{"+vars.map(name=>name+":"+rootStyle.getPropertyValue(name).trim()).join(";")+"}";
+    const css=(document.querySelector("style")?.textContent||"")+"\n"+variableCss;
+    await exportFromServer("pdf",{html:pages.join(""),css,filename:safeFileName(state.products[0]?.productName)});
   }catch(e){
     console.error(e);
-    alert(
-      "Не удалось сформировать PDF.\n\n"+
-      (e.message||e)
-    );
+    alert("Не удалось сформировать PDF.\n\n"+(e.message||e));
   }finally{
-    root?.remove();
     b.disabled=false;
     b.textContent="Скачать PDF";
   }
 }
-
 
 async function blobToUint8Array(blob){
   return new Uint8Array(await blob.arrayBuffer());
@@ -2030,52 +1957,30 @@ async function createDocx(){
 
 
 async function downloadDOCX(){
-
   const b=document.getElementById("downloadDocxBtn");
-
   b.disabled=true;
   b.textContent="Формирование DOCX...";
-
   try{
-
-    const blob=await createDocx();
-
-    const quotaAllowed=await consumeDownload("docx");
-    if(!quotaAllowed)return;
-
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-
-    a.href=url;
-    a.download=
-      safeFileName(
-        state.products[0]?.productName
-      )+".docx";
-
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    setTimeout(()=>{
-      URL.revokeObjectURL(url);
-    },1000);
-
+    const photos={};
+    for(const product of state.products){
+      const items=await getProductPhotosData(product);
+      for(const item of items)photos[item.photoId]=item.dataUrl;
+    }
+    await exportFromServer("docx",{
+      state,
+      photos,
+      filename:safeFileName(state.products[0]?.productName)
+    });
   }catch(e){
-
     console.error(e);
-
-    alert(
-      "Не удалось сформировать DOCX.\n\n"+
-      (e.message||e)
-    );
-
+    alert("Не удалось сформировать DOCX.\n\n"+(e.message||e));
   }finally{
-
     b.disabled=false;
     b.textContent="Скачать DOCX";
-
   }
-}const API_BASE="https://kp-commercial-api.alfapakk.workers.dev";
+}
+
+const API_BASE="https://preview-isolated-db-kp-commercial-api.alfapakk.workers.dev";
 const AUTH_TOKEN_KEY="kpCommercialAuthToken";
 
 function getAuthToken(){
@@ -2092,6 +1997,53 @@ function authFetch(path,options={}){
   const token=getAuthToken();
   if(token)headers.set("Authorization","Bearer "+token);
   return fetch(API_BASE+path,{...options,headers,credentials:"include"});
+}
+
+async function exportFromServer(format,payload){
+  if(!currentUser){
+    alert("Чтобы скачать документ, войдите или зарегистрируйтесь.");
+    openAuthModal("login");
+    return false;
+  }
+  let response;
+  try{
+    response=await authFetch("/api/export",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({format,...payload})
+    });
+  }catch(error){
+    alert("Не удалось связаться с сервером экспорта. Проверьте соединение и повторите попытку.");
+    return false;
+  }
+  if(response.status===401){
+    setAuthToken("");
+    currentUser=null;
+    updateAuthUI();
+    openAuthModal("login");
+    alert("Сессия завершилась. Войдите снова и повторите скачивание.");
+    return false;
+  }
+  if(!response.ok){
+    const result=await response.json().catch(()=>({}));
+    if(response.status===429||result.error==="daily_limit_reached"){
+      const remaining=Number(result?.usage?.remaining??0);
+      alert("Дневной лимит скачиваний исчерпан. Остаток на сегодня: "+remaining+". Лимит обновится в начале следующего дня.");
+      return false;
+    }
+    console.error("Document export API error:",response.status,result);
+    throw new Error(result.error||"Сервер не смог сформировать документ");
+  }
+  const blob=await response.blob();
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=payload.filename+"."+format;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  return true;
 }
 
 async function consumeDownload(format){
