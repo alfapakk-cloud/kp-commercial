@@ -2431,6 +2431,11 @@ async function loadAccountUsage(){
     const planName=typeof plan==="string"?plan:(plan.name||plan.code||"FREE");
     const pdfMonth=Number(month.pdf_count||0);
     const docxMonth=Number(month.docx_count||0);
+    if(plan.is_owner||planName==="OWNER"){
+      const pdfDay=Number(day?.pdf_count||0),docxDay=Number(day?.docx_count||0);
+      target.innerHTML='<div class="account-usage-summary"><div class="account-usage-card"><span>Тип аккаунта</span><strong>Владелец</strong></div><div class="account-usage-card"><span>Лимит скачиваний</span><strong>Без ограничений</strong></div><div class="account-usage-card"><span>Скачано сегодня</span><strong>'+(pdfDay+docxDay)+'</strong></div></div><div class="account-coming-grid"><div class="account-coming-item"><strong>PDF сегодня: '+pdfDay+'</strong><span>Для аккаунта владельца дневной лимит не применяется.</span></div><div class="account-coming-item"><strong>DOCX сегодня: '+docxDay+'</strong><span>Для аккаунта владельца дневной лимит не применяется.</span></div><div class="account-coming-item"><strong>PDF за месяц: '+pdfMonth+'</strong><span>Месячная статистика сохраняется.</span></div><div class="account-coming-item"><strong>DOCX за месяц: '+docxMonth+'</strong><span>Месячная статистика сохраняется.</span></div></div>';
+      return;
+    }
     if(!day){
       target.innerHTML='<div class="account-usage-summary"><div class="account-usage-card"><span>Тариф</span><strong>'+accountEscape(planName)+'</strong></div><div class="account-usage-card"><span>PDF за месяц</span><strong>'+pdfMonth+'</strong></div><div class="account-usage-card"><span>DOCX за месяц</span><strong>'+docxMonth+'</strong></div></div><div class="account-info-note">Месячная статистика доступна. Дневной счётчик и ограничение скачиваний появятся после обновления API Worker.</div>';
       return;
