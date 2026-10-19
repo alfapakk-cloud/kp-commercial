@@ -95,6 +95,47 @@
   .mobile-actionbar{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
   .mobile-actionbar .btn{min-height:40px}
 }
+
+/* Mobile account UX: keep plan cards readable and actions easy to tap */
+@media(max-width:760px){
+  .app.account-view{overflow:hidden}
+  .app.account-view .topbar{align-items:center;flex-wrap:wrap}
+  .app.account-view .topbar-title{flex:1 1 100%;min-width:0}
+  .app.account-view .toolbar{width:100%;justify-content:flex-end}
+  .app.account-view .account-page{padding:16px 12px calc(78px + env(safe-area-inset-bottom));overscroll-behavior:contain}
+  .app.account-view .account-page-top{gap:10px;margin-bottom:18px}
+  .app.account-view .account-page-top h1{font-size:23px;line-height:1.2}
+  .app.account-view .account-page-subtitle{font-size:13px;line-height:1.45}
+  .app.account-view .account-user-chip{align-self:stretch;max-width:100%;border-radius:10px;padding:9px 11px;font-size:12px;overflow-wrap:anywhere}
+  .app.account-view .account-page-back{margin:0 0 14px;min-height:40px}
+  .app.account-view .account-panel{padding:15px 13px;border-radius:13px}
+  .app.account-view .account-panel h2{font-size:20px}
+  .app.account-view .account-panel-intro{margin-bottom:16px;font-size:13px}
+  .app.account-view .account-plans-grid{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:14px}
+  .app.account-view .account-plan-card{padding:17px 16px;border-radius:13px}
+  .app.account-view .account-plan-featured{box-shadow:0 0 0 1px #ff8100}
+  .app.account-view .account-plan-name{font-size:12px}
+  .app.account-view .account-plan-price{margin-top:8px;font-size:26px;line-height:1.25;overflow-wrap:anywhere}
+  .app.account-view .account-plan-price span{font-size:12px;white-space:nowrap}
+  .app.account-view .account-plan-annual{min-height:0;margin-top:5px;font-size:12px}
+  .app.account-view .account-plan-features{margin:12px 0 14px;padding-left:18px}
+  .app.account-view .account-plan-features li{margin:8px 0;font-size:13px;line-height:1.45}
+  .app.account-view .account-plan-current{padding-top:10px;font-size:12px}
+  .app.account-view .account-plan-note{font-size:12px;line-height:1.55}
+  .app.account-view .account-usage-summary{grid-template-columns:minmax(0,1fr);gap:8px}
+  .app.account-view .account-usage-card{padding:13px}
+  .app.account-view .account-usage-card strong{font-size:18px}
+}
+@media(max-width:430px){
+  .app.account-view .account-page{padding-left:10px;padding-right:10px}
+  .app.account-view .account-page-top h1{font-size:21px}
+  .app.account-view .account-plan-card{padding:15px 13px}
+  .app.account-view .account-plan-price{font-size:24px}
+  .app.account-view .account-welcome{padding:18px 16px}
+  .app.account-view .account-welcome h2{font-size:19px}
+  .app.account-view .account-nav-card{padding:14px}
+}
+
 </style>
 </head>
 <body>
