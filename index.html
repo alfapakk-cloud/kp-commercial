@@ -765,12 +765,27 @@ async function downloadPDF(){
       filename:safeFileName(state.products[0]?.productName)
     });
     if(!blob)return;
+    const filename=safeFileName(state.products[0]?.productName)+".pdf";
+    // iOS Safari may ignore the download attribute for Blob URLs and open the PDF inline.
+    // Use the native share sheet when it supports files, where the user can choose "Save to Files".
+    const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+    const file=new File([blob],filename,{type:"application/pdf"});
+    if(isAppleMobile&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file],title:filename});
+        return;
+      }catch(shareError){
+        if(shareError&&shareError.name==="AbortError")return;
+        console.warn("Native PDF save sheet unavailable; falling back to download link.",shareError);
+      }
+    }
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
     a.href=url;
-    a.download=safeFileName(state.products[0]?.productName)+".pdf";
+    a.download=filename;
+    a.style.display="none";
     document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
   }catch(e){
     console.error(e);
     alert("Не удалось сформировать PDF.\n\n"+(e.message||e));
