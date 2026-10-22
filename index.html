@@ -792,6 +792,102 @@ const managerName=document.getElementById("managerName"),managerPhone=document.g
 document.getElementById("addProductBtn").onclick=()=>{state.products.push(createProduct());saveState();renderProductsEditor();renderPreview();setTimeout(()=>document.querySelectorAll(".product-editor-card").at(-1)?.scrollIntoView({behavior:"smooth",block:"start"}),50)};
 document.getElementById("resetBtn").onclick=async()=>{if(!confirm("Сбросить текущее коммерческое предложение?"))return;for(const p of state.products)for(const id of p.photoIds||[])await deletePhoto(id).catch(()=>{});state.products=[createProduct()];state.managerName="";state.managerPhone="";state.advantages=DEFAULT_ADVANTAGES.slice();Object.assign(state,DEFAULT_BRANDING);saveState();managerName.value="";managerPhone.value="";renderBrandingEditor();applyBranding();renderProductsEditor();renderPreview()};
 window.addEventListener("resize",fitPreviewPages);
+// Safari needs a fresh user gesture to open the file share sheet. Keep the
+// prepared file in this dialog so saving/retrying does not repeat the export.
+function isAppleMobile(){
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)||
+    (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+}
+function downloadPreparedFile(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;
+  link.download=filename;
+  link.style.display="none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+function showPdfSaveDialog(blob,filename){
+  const previous=document.getElementById("pdfSaveDialog");
+  if(previous)previous.closePreparedPdf();
+  const focused=document.activeElement;
+  const overlay=document.createElement("div");
+  overlay.id="pdfSaveDialog";
+  overlay.className="auth-modal";
+  overlay.innerHTML='<style>#pdfSaveDialog [hidden]{display:none!important}</style><div class="auth-backdrop"></div><div class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="pdfSaveTitle" aria-describedby="pdfSaveStatus"><h2 id="pdfSaveTitle">PDF готов</h2><p class="pdf-save-name" style="overflow-wrap:anywhere;font-size:13px"></p><p id="pdfSaveStatus" role="status" style="font-size:14px;line-height:1.5">Нажмите «Сохранить PDF», затем выберите «Сохранить в Файлы».</p><button class="btn btn-primary auth-submit" type="button" data-pdf-save>Сохранить PDF</button><a class="btn" data-pdf-download style="display:block;text-align:center;margin-top:10px;text-decoration:none">Скачать напрямую</a><button class="btn" type="button" data-pdf-close style="width:100%;margin-top:10px">Закрыть</button></div>';
+  const save=overlay.querySelector("[data-pdf-save]");
+  const direct=overlay.querySelector("[data-pdf-download]");
+  const close=overlay.querySelector("[data-pdf-close]");
+  const status=overlay.querySelector("#pdfSaveStatus");
+  overlay.querySelector(".pdf-save-name").textContent=filename;
+  let file=null;
+  let shareAvailable=false;
+  try{
+    if(typeof File==="function")file=new File([blob],filename,{type:"application/pdf"});
+    shareAvailable=!!(file&&typeof navigator.share==="function"&&typeof navigator.canShare==="function"&&navigator.canShare({files:[file]}));
+  }catch{}
+  const url=URL.createObjectURL(blob);
+  direct.href=url;
+  direct.download=filename;
+  if(!shareAvailable){
+    save.hidden=true;
+    direct.textContent="Скачать PDF";
+    direct.classList.add("btn-primary");
+    status.textContent="Нажмите «Скачать PDF». Если файл откроется, выберите «Поделиться» → «Сохранить в Файлы».";
+  }
+  let busy=false;
+  overlay.closePreparedPdf=()=>{
+    if(busy)return;
+    overlay.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    if(focused?.isConnected)focused.focus();
+  };
+  close.onclick=overlay.closePreparedPdf;
+  overlay.querySelector(".auth-backdrop").onclick=overlay.closePreparedPdf;
+  save.onclick=async()=>{
+    if(busy)return;
+    busy=true;
+    save.disabled=close.disabled=true;
+    direct.hidden=true;
+    try{
+      // This call runs directly in the click handler, before any await.
+      await navigator.share({files:[file],title:filename});
+      status.textContent="Меню закрыто. Если файл ещё не сохранён, нажмите «Сохранить PDF» и выберите «Сохранить в Файлы».";
+    }catch(error){
+      status.textContent=error?.name==="AbortError"
+        ?"Сохранение отменено. PDF остаётся готовым — можно попробовать ещё раз."
+        :"Не удалось открыть меню сохранения. Попробуйте ещё раз или нажмите «Скачать напрямую».";
+    }finally{
+      busy=false;
+      save.disabled=close.disabled=false;
+      direct.hidden=false;
+      save.focus();
+    }
+  };
+  overlay.addEventListener("keydown",event=>{
+    if(event.key==="Escape"){
+      event.preventDefault();
+      event.stopPropagation();
+      overlay.closePreparedPdf();
+    }
+    if(event.key==="Tab"){
+      const controls=[save,direct,close].filter(el=>!el.hidden&&!el.disabled);
+      if(!controls.length){event.preventDefault();return;}
+      const first=controls[0],last=controls.at(-1);
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+    }
+  });
+  document.body.appendChild(overlay);
+  (shareAvailable?save:direct).focus();
+}
+function savePreparedPdf(blob,filename){
+  if(isAppleMobile())showPdfSaveDialog(blob,filename);
+  else downloadPreparedFile(blob,filename);
+}
+
 async function downloadPDF(){
   const b=document.getElementById("downloadPdfBtn");
   b.disabled=true;
@@ -807,26 +903,7 @@ async function downloadPDF(){
     });
     if(!blob)return;
     const filename=safeFileName(state.products[0]?.productName)+".pdf";
-    // iOS Safari may ignore the download attribute for Blob URLs and open the PDF inline.
-    // Use the native share sheet when it supports files, where the user can choose "Save to Files".
-    const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-    const file=new File([blob],filename,{type:"application/pdf"});
-    if(isAppleMobile&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      try{
-        await navigator.share({files:[file],title:filename});
-        return;
-      }catch(shareError){
-        if(shareError&&shareError.name==="AbortError")return;
-        console.warn("Native PDF save sheet unavailable; falling back to download link.",shareError);
-      }
-    }
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;
-    a.download=filename;
-    a.style.display="none";
-    document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),30000);
+    savePreparedPdf(blob,filename);
   }catch(e){
     console.error(e);
     alert("Не удалось сформировать PDF.\n\n"+(e.message||e));
