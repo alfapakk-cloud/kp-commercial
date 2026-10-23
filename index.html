@@ -2369,6 +2369,7 @@ function renderAccountPage(){
   }
   accountPageContent.innerHTML='<button class="account-page-back" type="button" id="accountPageBack">← Мой аккаунт</button>'+accountHeader(section.title,section.subtitle)+'<section class="account-panel"><h2>'+section.title+'</h2><p class="account-panel-intro">'+section.subtitle+'</p>'+content+'</section>';
   document.getElementById("accountPageBack").onclick=()=>{location.hash="#account"};
+  if(route==="usage")loadAccountUsage();
   const openSettings=document.getElementById("accountOpenEditorSettings");
   if(openSettings)openSettings.onclick=()=>{location.hash="";setTimeout(()=>document.getElementById("companyName")?.scrollIntoView({behavior:"smooth",block:"start"}),0)};
 }
