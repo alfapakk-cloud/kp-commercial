@@ -1,10 +1,9 @@
 {
   "$schema": "https://schema.cloudflare.com/wrangler/config-schema.json",
   "name": "kp-commercial-preview",
+  "main": "preview-worker.js",
+  "account_id": "65ba4c261ad6dc5d30da5896bbff220c",
   "compatibility_date": "2026-03-24",
   "workers_dev": true,
-  "assets": {
-    "directory": ".",
-    "not_found_handling": "single-page-application"
-  }
+  "keep_vars": true
 }
