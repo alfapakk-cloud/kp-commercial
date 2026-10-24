@@ -546,11 +546,11 @@ function makePage(content,index,continuation=false,withAdvantages=false){
       ${headerHtml()}
       ${continuation?`<div class="page-continuation">Продолжение предложения — оборудование №${index+1}</div>`:""}
       ${c}
+      ${withAdvantages?advantagesHtml():""}
     </div>
 
     <div class="kp-bottom">
       <div class="kp-footer-stack">
-        ${withAdvantages?advantagesHtml():""}
         ${footerHtml()}
       </div>
     </div>
@@ -572,16 +572,18 @@ async function paginateProduct(p,index){
     page.innerHTML=
       '<div class="kp-content">'+headerHtml()+
       (index>0 && !firstPage?'<div class="page-continuation">Продолжение предложения — оборудование №'+(index+1)+'</div>':'')+
-      '<div class="measureBlocks"></div></div>'+
-      '<div class="kp-bottom"><div class="kp-footer-stack">'+advantagesHtml()+footerHtml()+'</div></div>';
+      '<div class="measureBlocks"></div>'+advantagesHtml()+'</div>'+
+      '<div class="kp-bottom"><div class="kp-footer-stack">'+footerHtml()+'</div></div>';
     document.body.appendChild(page);
     await new Promise(r=>requestAnimationFrame(r));
     const content=page.querySelector(".kp-content");
     const header=page.querySelector(".kp-header");
     const bottom=page.querySelector(".kp-bottom");
+    const advantages=page.querySelector(".advantages");
     const contentTop=header.getBoundingClientRect().bottom;
     const bottomTop=bottom.getBoundingClientRect().top;
-    const available=Math.max(0,bottomTop-contentTop);
+    const advantagesHeight=advantages.getBoundingClientRect().height;
+    const available=Math.max(0,bottomTop-contentTop-advantagesHeight);
     page.remove();
     return available;
   }
