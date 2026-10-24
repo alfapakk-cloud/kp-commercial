@@ -752,8 +752,15 @@ document.getElementById("addProductBtn").onclick=()=>{state.products.push(create
 document.getElementById("resetBtn").onclick=async()=>{if(!confirm("Сбросить текущее коммерческое предложение?"))return;for(const p of state.products)for(const id of p.photoIds||[])await deletePhoto(id).catch(()=>{});state.products=[createProduct()];state.managerName="";state.managerPhone="";state.advantages=DEFAULT_ADVANTAGES.slice();Object.assign(state,DEFAULT_BRANDING);saveState();managerName.value="";managerPhone.value="";renderBrandingEditor();applyBranding();renderProductsEditor();renderPreview()};
 window.addEventListener("resize",fitPreviewPages);
 function savePreparedPdf(blob,filename){
-  if(isAppleMobile())showPdfSaveDialog(blob,filename);
-  else downloadPreparedFile(blob,filename);
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;
+  link.download=filename;
+  link.style.display="none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 
 async function requestServerExport(format,payload){
