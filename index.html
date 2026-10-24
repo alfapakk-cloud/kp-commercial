@@ -95,6 +95,7 @@
   .mobile-actionbar{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
   .mobile-actionbar .btn{min-height:40px}
 }
+.account-settings-form{display:flex;flex-direction:column;gap:18px}.account-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.account-settings-section{min-width:0;padding:18px;border:1px solid #e5e7eb;border-radius:12px}.account-settings-section h3{margin:0 0 15px;font-size:16px}.account-setting-field{display:flex;flex-direction:column;gap:7px;margin:0 0 13px;color:#59616d;font-size:13px}.account-setting-field input:not([type=color]){width:100%;min-height:42px;padding:10px 12px;border:1px solid #d9dce1;border-radius:8px;background:#fff;color:#202124;font:inherit}.account-setting-field input[type=file]{padding:8px}.account-setting-two-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.account-setting-colors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.account-setting-colors input[type=color]{width:54px;height:38px;padding:2px;border:1px solid #d9dce1;border-radius:6px;background:#fff}.account-logo-preview{display:none;max-width:190px;max-height:80px;margin:0 0 10px;padding:5px;border:1px solid #e5e7eb;border-radius:8px;object-fit:contain}.account-advantages-editor{display:grid;gap:8px;margin-top:8px}.account-settings-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}.account-settings-actions span,.account-add-user-form span{font-size:13px;color:#59616d}.account-settings-help{margin:0;color:#6b7280;font-size:12px;line-height:1.5}.account-team-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px}.account-team-summary>div{padding:15px;border:1px solid #e5e7eb;border-radius:12px}.account-team-summary span,.account-team-summary strong{display:block}.account-team-summary span{font-size:12px;color:#6b7280}.account-team-summary strong{margin-top:6px;font-size:18px}.account-user-list{display:grid;gap:8px;margin-top:16px}.account-user-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px}.account-user-identity{display:grid;gap:4px;min-width:0}.account-user-identity strong{overflow-wrap:anywhere;font-size:14px}.account-user-identity span{font-size:12px;color:#6b7280}.account-remove-user{flex:none;padding:7px 10px;border:1px solid #d9dce1;border-radius:8px;background:#fff;color:#555}.account-remove-user:hover{border-color:#d93025;color:#d93025}.account-add-user-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;margin-top:18px}.account-add-user-form .account-setting-field{margin:0}.account-add-user-form span{grid-column:1/-1}@media(max-width:760px){.account-form-grid{grid-template-columns:1fr}.account-setting-two-cols{grid-template-columns:1fr}.account-add-user-form{grid-template-columns:1fr}.account-team-summary{grid-template-columns:1fr}.account-user-row{align-items:flex-start}}
 </style>
 </head>
 <body>
@@ -189,7 +190,7 @@ function loadState(){let saved=null;try{saved=JSON.parse(localStorage.getItem(ST
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify({products:state.products,managerName:state.managerName,managerPhone:state.managerPhone,advantages:state.advantages,companyName:state.companyName,companyDescription:state.companyDescription,companyPhone:state.companyPhone,companySite:state.companySite,companyLogo:state.companyLogo,primaryColor:state.primaryColor,headerColor:state.headerColor,footerColor:state.footerColor,priceCommentColor:state.priceCommentColor}));saveRemoteSettingsDebounced()}
 
 let remoteSaveTimer=null;
-let remoteSaveInFlight=false;
+let remoteSaveQueue=Promise.resolve(true);
 function getRemoteSettingsPayload(){
   return {
     company_name:state.companyName,
@@ -201,32 +202,36 @@ function getRemoteSettingsPayload(){
     header_color:state.headerColor,
     footer_color:state.footerColor,
     price_comment_color:state.priceCommentColor,
-    advantages:Array.isArray(state.advantages)?state.advantages.slice(0,5):[]
+    advantages:Array.isArray(state.advantages)?state.advantages.slice(0,5):[],
+    manager_name:state.managerName,
+    manager_phone:state.managerPhone
   };
 }
 function saveRemoteSettingsDebounced(){
   clearTimeout(remoteSaveTimer);
   remoteSaveTimer=setTimeout(saveRemoteSettings,350);
 }
-async function saveRemoteSettings(){
-  if(remoteSaveInFlight)return;
-  try{
-    const meResponse=await authFetch("/api/me",{method:"GET"});
-    if(!meResponse.ok)return;
-    const me=await meResponse.json();
-    if(!me?.authenticated)return;
-    remoteSaveInFlight=true;
-    const response=await authFetch("/api/settings",{
-      method:"PUT",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(getRemoteSettingsPayload())
-    });
-    if(!response.ok)console.warn("API settings save failed:",response.status);
-  }catch(error){
-    console.warn("API settings save failed:",error);
-  }finally{
-    remoteSaveInFlight=false;
-  }
+function saveRemoteSettings(){
+  const task=remoteSaveQueue.catch(()=>false).then(async()=>{
+    try{
+      const meResponse=await authFetch("/api/me",{method:"GET"});
+      if(!meResponse.ok)return false;
+      const me=await meResponse.json();
+      if(!me?.authenticated)return false;
+      const response=await authFetch("/api/settings",{
+        method:"PUT",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(getRemoteSettingsPayload())
+      });
+      if(!response.ok)console.warn("API settings save failed:",response.status);
+      return response.ok;
+    }catch(error){
+      console.warn("API settings save failed:",error);
+      return false;
+    }
+  });
+  remoteSaveQueue=task;
+  return task;
 }
 function escapeHtml(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
 function escapeAttr(v){return escapeHtml(v)}
@@ -2121,7 +2126,9 @@ async function loadRemoteSettings(){
       "primaryColor",
       "headerColor",
       "footerColor",
-      "priceCommentColor"
+      "priceCommentColor",
+      "managerName",
+      "managerPhone"
     ];
 
     const mapping={
@@ -2133,7 +2140,9 @@ async function loadRemoteSettings(){
       primaryColor:"primary_color",
       headerColor:"header_color",
       footerColor:"footer_color",
-      priceCommentColor:"price_comment_color"
+      priceCommentColor:"price_comment_color",
+      managerName:"manager_name",
+      managerPhone:"manager_phone"
     };
 
     fields.forEach(field=>{
@@ -2367,16 +2376,174 @@ function renderAccountPage(){
   }else if(route==="templates"){
     content='<div class="account-info-note">Страница подготовлена. Следующий этап — подключить сохранение нескольких вариантов оформления и возможность применять шаблон к новому КП.</div>';
   }else if(route==="users"){
-    content='<div class="account-info-note">Управление сотрудниками требует серверной модели ролей и прав доступа. Подключим раздел после согласования правил доступа.</div>';
+    content='<div id="accountUsersContent"><p>Загружаем пользователей…</p></div>';
   }else if(route==="settings"){
-    content='<div class="account-info-note">Настройки компании уже доступны в редакторе КП. Откройте их там, чтобы изменить реквизиты и фирменное оформление.</div><button class="btn btn-primary" type="button" id="accountOpenEditorSettings">Открыть настройки в редакторе</button>';
+    content=accountCompanySettingsForm();
   }
   accountPageContent.innerHTML='<button class="account-page-back" type="button" id="accountPageBack">← Мой аккаунт</button>'+accountHeader(section.title,section.subtitle)+'<section class="account-panel"><h2>'+section.title+'</h2><p class="account-panel-intro">'+section.subtitle+'</p>'+content+'</section>';
   document.getElementById("accountPageBack").onclick=()=>{location.hash="#account"};
   if(route==="usage")loadAccountUsage();
-  const openSettings=document.getElementById("accountOpenEditorSettings");
-  if(openSettings)openSettings.onclick=()=>{location.hash="";setTimeout(()=>document.getElementById("companyName")?.scrollIntoView({behavior:"smooth",block:"start"}),0)};
+  if(route==="settings")bindAccountCompanySettings();
+  if(route==="users")loadAccountUsers();
 }
+function accountCompanySettingsForm(){
+  const advantages=Array.isArray(state.advantages)&&state.advantages.length===5?state.advantages:DEFAULT_ADVANTAGES;
+  return '<form id="accountCompanySettingsForm" class="account-settings-form">'+
+    '<div class="account-form-grid">'+
+      '<section class="account-settings-section"><h3>Реквизиты компании</h3>'+
+        '<label class="account-setting-field">Название компании<input id="accountCompanyName" type="text" placeholder="Например: АЛЬФАПРОМ"></label>'+
+        '<label class="account-setting-field">Короткое описание компании<input id="accountCompanyDescription" type="text" placeholder="Оборудование для пищевого производства и упаковки"></label>'+
+        '<div class="account-setting-two-cols"><label class="account-setting-field">Телефон компании<input id="accountCompanyPhone" type="tel" placeholder="+7 (___) ___-__-__"></label>'+
+        '<label class="account-setting-field">Сайт компании<input id="accountCompanySite" type="url" placeholder="https://example.ru"></label></div>'+
+        '<label class="account-setting-field">Логотип компании<input id="accountCompanyLogoInput" type="file" accept="image/*"></label>'+
+        '<img id="accountCompanyLogoPreview" class="account-logo-preview" alt="Предпросмотр логотипа">'+
+      '</section>'+
+      '<section class="account-settings-section"><h3>Оформление КП</h3>'+
+        '<div class="account-setting-colors">'+
+          '<label class="account-setting-field">Основной цвет<input id="accountPrimaryColor" type="color"></label>'+
+          '<label class="account-setting-field">Цвет шапки<input id="accountHeaderColor" type="color"></label>'+
+          '<label class="account-setting-field">Цвет футера<input id="accountFooterColor" type="color"></label>'+
+          '<label class="account-setting-field">Комментарий к цене<input id="accountPriceCommentColor" type="color"></label>'+
+        '</div>'+
+        '<div class="account-setting-field"><span>Пять преимуществ</span><div id="accountAdvantagesEditor" class="account-advantages-editor">'+advantages.map((value,index)=>'<input type="text" data-account-advantage-index="'+index+'" value="'+accountEscape(value)+'" placeholder="Преимущество '+(index+1)+'">').join("")+'</div></div>'+
+      '</section>'+
+      '<section class="account-settings-section account-manager-section"><h3>Информация о менеджере</h3>'+
+        '<div class="account-setting-two-cols"><label class="account-setting-field">Имя менеджера<input id="accountManagerName" type="text" placeholder="Имя менеджера"></label>'+
+        '<label class="account-setting-field">Телефон менеджера<input id="accountManagerPhone" type="tel" placeholder="+7 (___) ___-__-__"></label></div>'+
+      '</section>'+
+    '</div>'+
+    '<div class="account-settings-actions"><button class="btn btn-primary" type="submit">Сохранить настройки</button><span id="accountCompanySaveStatus" role="status"></span></div>'+
+    '<p class="account-settings-help">Изменения синхронизируются с редактором КП и сохраняются в аккаунте.</p>'+
+  '</form>';
+}
+function updateAccountCompanySetting(key,value){
+  state[key]=value;
+  if(key==="primaryColor"){
+    state.footerColor=value;
+    const footer=document.getElementById("footerColor");
+    if(footer)footer.value=value;
+    const accountFooter=document.getElementById("accountFooterColor");
+    if(accountFooter)accountFooter.value=value;
+  }
+  const editorIds={companyName:"companyName",companyDescription:"companyDescription",companyPhone:"companyPhone",companySite:"companySite",primaryColor:"primaryColor",headerColor:"headerColor",footerColor:"footerColor",priceCommentColor:"priceCommentColor",managerName:"managerName",managerPhone:"managerPhone"};
+  const accountIds={companyName:"accountCompanyName",companyDescription:"accountCompanyDescription",companyPhone:"accountCompanyPhone",companySite:"accountCompanySite",primaryColor:"accountPrimaryColor",headerColor:"accountHeaderColor",footerColor:"accountFooterColor",priceCommentColor:"accountPriceCommentColor",managerName:"accountManagerName",managerPhone:"accountManagerPhone"};
+  const editor=document.getElementById(editorIds[key]);
+  if(editor&&editor!==document.activeElement)editor.value=state[key]||"";
+  const account=document.getElementById(accountIds[key]);
+  if(account&&account!==document.activeElement)account.value=state[key]||"";
+  applyBranding();
+  saveState();
+  renderPreview();
+}
+function bindAccountCompanySettings(){
+  const keys={accountCompanyName:"companyName",accountCompanyDescription:"companyDescription",accountCompanyPhone:"companyPhone",accountCompanySite:"companySite",accountPrimaryColor:"primaryColor",accountHeaderColor:"headerColor",accountFooterColor:"footerColor",accountPriceCommentColor:"priceCommentColor",accountManagerName:"managerName",accountManagerPhone:"managerPhone"};
+  for(const [id,key] of Object.entries(keys)){
+    const field=document.getElementById(id);
+    if(!field)continue;
+    field.value=state[key]||"";
+    field.oninput=()=>updateAccountCompanySetting(key,field.value);
+  }
+  const logo=document.getElementById("accountCompanyLogoPreview");
+  if(logo){logo.src=state.companyLogo||LOGO_DATA;logo.style.display="block"}
+  const logoInput=document.getElementById("accountCompanyLogoInput");
+  if(logoInput)logoInput.onchange=()=>{
+    const file=logoInput.files&&logoInput.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{state.companyLogo=String(reader.result||"");if(logo){logo.src=state.companyLogo;logo.style.display="block"}const editorPreview=document.getElementById("companyLogoPreview");if(editorPreview){editorPreview.src=state.companyLogo;editorPreview.style.display="block"}saveState();renderPreview()};
+    reader.readAsDataURL(file);
+  };
+  const advantages=document.getElementById("accountAdvantagesEditor");
+  if(advantages)advantages.oninput=event=>{
+    const field=event.target.closest("[data-account-advantage-index]");
+    if(!field)return;
+    const index=Number(field.dataset.accountAdvantageIndex);
+    if(!Number.isInteger(index)||index<0||index>=5)return;
+    if(!Array.isArray(state.advantages)||state.advantages.length!==5)state.advantages=DEFAULT_ADVANTAGES.slice();
+    state.advantages[index]=field.value;
+    const editorField=document.querySelector('#advantagesEditor [data-advantage-index="'+index+'"]');
+    if(editorField&&editorField!==document.activeElement)editorField.value=field.value;
+    saveState();
+    renderPreview();
+  };
+  const form=document.getElementById("accountCompanySettingsForm");
+  if(form)form.onsubmit=async event=>{
+    event.preventDefault();
+    clearTimeout(remoteSaveTimer);
+    const status=document.getElementById("accountCompanySaveStatus");
+    if(status)status.textContent="Сохраняем…";
+    const saved=await saveRemoteSettings();
+    if(status&&status.isConnected)status.textContent=saved?"Сохранено. Редактор использует эти же настройки.":"Не удалось сохранить на сервер. Проверьте подключение и повторите попытку.";
+  };
+}
+async function loadAccountUsers(){
+  const target=document.getElementById("accountUsersContent");
+  if(!target)return;
+  target.innerHTML="<p>Загружаем пользователей…</p>";
+  try{
+    const response=await authFetch("/api/team",{method:"GET"});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(result.error||"Не удалось загрузить пользователей");
+    const plan=result.plan_code||"FREE";
+    if(!result.available){
+      const note=plan==="FREE"?"В тарифе FREE доступно одно место. Управление пользователями появится на тарифе с командными функциями.":"Управление пользователями недоступно для текущего тарифа.";
+      target.innerHTML='<div class="account-info-note">'+accountEscape(note)+'</div>';
+      return;
+    }
+    const members=Array.isArray(result.members)?result.members:[];
+    const limit=result.seat_limit===null||result.seat_limit===undefined?null:Number(result.seat_limit);
+    const seatLabel=limit===null?members.length+" пользователей":members.length+" из "+limit+" мест";
+    const businessNeedsLimit=plan==="BUSINESS"&&result.reason==="business_seat_limit_unconfigured";
+    let html='<div class="account-team-summary"><div><span>Тариф команды</span><strong>'+accountEscape(plan)+'</strong></div><div><span>Занято мест</span><strong>'+accountEscape(seatLabel)+'</strong></div></div>';
+    if(plan==="TEAM")html+='<div class="account-info-note">Участники используют общий лимит команды — 50 скачиваний в день.</div>';
+    if(businessNeedsLimit)html+='<div class="account-info-note">Для тарифа BUSINESS владелец сервиса должен указать число мест по договору. Добавление сотрудников пока отключено.</div>';
+    html+='<div class="account-user-list">'+members.map(member=>'<div class="account-user-row"><div class="account-user-identity"><strong>'+accountEscape(member.email||"")+'</strong><span>'+(member.role==="owner"?"Владелец":"Участник")+'</span></div>'+(result.can_manage&&member.role!=="owner"?'<button class="btn account-remove-user" type="button" data-remove-team-user="'+accountEscape(member.user_id)+'" data-user-email="'+accountEscape(member.email||"")+'">Удалить</button>':"")+'</div>').join("")+'</div>';
+    const canAdd=!!result.can_manage&&!businessNeedsLimit&&(limit===null||members.length<limit);
+    if(canAdd){
+      html+='<form id="accountAddUserForm" class="account-add-user-form"><label class="account-setting-field">Email зарегистрированного аккаунта<input id="accountAddUserEmail" type="email" required placeholder="name@example.com"></label><button class="btn btn-primary" type="submit">Добавить пользователя</button><span id="accountAddUserStatus" role="status"></span></form><p class="account-settings-help">Пользователь должен сначала зарегистрироваться. Письмо-приглашение не отправляется.</p>';
+    }else if(result.can_manage&&limit!==null&&members.length>=limit){
+      html+='<div class="account-info-note">Свободных мест в тарифе нет. Чтобы добавить пользователя, увеличьте число мест в подписке.</div>';
+    }else if(!result.can_manage){
+      html+='<div class="account-info-note">Добавлять и удалять сотрудников может только владелец команды.</div>';
+    }
+    target.innerHTML=html;
+    const form=document.getElementById("accountAddUserForm");
+    if(form)form.onsubmit=async event=>{
+      event.preventDefault();
+      const button=form.querySelector('button[type="submit"]');
+      const status=document.getElementById("accountAddUserStatus");
+      if(button)button.disabled=true;
+      if(status)status.textContent="Добавляем…";
+      try{
+        const addResponse=await authFetch("/api/team/members",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("accountAddUserEmail").value})});
+        const added=await addResponse.json().catch(()=>({}));
+        if(!addResponse.ok)throw new Error(added.error||"Не удалось добавить пользователя");
+        await loadAccountUsers();
+      }catch(error){
+        const messages={user_not_found:"Аккаунт с таким email не найден. Сначала пользователь должен зарегистрироваться.",user_not_active:"Этот аккаунт неактивен.",user_already_in_a_team:"Этот пользователь уже входит в другую команду.",already_a_team_member:"Этот пользователь уже входит в команду.",user_has_active_plan:"У пользователя уже есть активный тариф.",seat_limit_reached:"В тарифе закончились свободные места.",team_owner_required:"Управлять участниками может только владелец команды.",business_seat_limit_unconfigured:"Сначала задайте число мест для тарифа BUSINESS.",invalid_email:"Проверьте адрес электронной почты."};
+        if(status)status.textContent=messages[error.message]||"Не удалось добавить пользователя. Повторите попытку.";
+        if(button)button.disabled=false;
+      }
+    };
+    target.querySelectorAll("[data-remove-team-user]").forEach(button=>button.onclick=async()=>{
+      const memberId=button.dataset.removeTeamUser,email=button.dataset.userEmail||"пользователя";
+      if(!confirm("Удалить "+email+" из команды? Его прежний тариф будет восстановлен."))return;
+      button.disabled=true;
+      try{
+        const removeResponse=await authFetch("/api/team/members/"+encodeURIComponent(memberId),{method:"DELETE"});
+        const removed=await removeResponse.json().catch(()=>({}));
+        if(!removeResponse.ok)throw new Error(removed.error||"Не удалось удалить пользователя");
+        await loadAccountUsers();
+      }catch(error){
+        button.disabled=false;
+        alert("Не удалось удалить пользователя. Повторите попытку.");
+      }
+    });
+  }catch(error){
+    target.innerHTML='<div class="account-info-note">Не удалось загрузить пользователей: '+accountEscape(error.message||"ошибка API")+'.</div>';
+  }
+}
+
 async function loadAccountUsage(){
   const target=document.getElementById("accountUsageContent");
   if(!target)return;
