@@ -187,6 +187,7 @@ function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify({products:s
 
 let remoteSaveTimer=null;
 let remoteSaveInFlight=false;
+let remoteSaveQueued=false;
 function getRemoteSettingsPayload(){
   return {
     company_name:state.companyName,
@@ -198,7 +199,9 @@ function getRemoteSettingsPayload(){
     header_color:state.headerColor,
     footer_color:state.footerColor,
     price_comment_color:state.priceCommentColor,
-    advantages:Array.isArray(state.advantages)?state.advantages.slice(0,5):[]
+    advantages:Array.isArray(state.advantages)?state.advantages.slice(0,5):[],
+    manager_name:state.managerName,
+    manager_phone:state.managerPhone
   };
 }
 function saveRemoteSettingsDebounced(){
@@ -206,23 +209,28 @@ function saveRemoteSettingsDebounced(){
   remoteSaveTimer=setTimeout(saveRemoteSettings,350);
 }
 async function saveRemoteSettings(){
-  if(remoteSaveInFlight)return;
+  if(remoteSaveInFlight){remoteSaveQueued=true;return}
+  remoteSaveInFlight=true;
+  const status=document.getElementById("accountSettingsSaveStatus");
+  if(status)status.textContent="Сохраняем изменения…";
   try{
     const meResponse=await authFetch("/api/me",{method:"GET"});
-    if(!meResponse.ok)return;
+    if(!meResponse.ok){if(status)status.textContent="Не удалось сохранить. Проверьте вход в аккаунт.";return}
     const me=await meResponse.json();
-    if(!me?.authenticated)return;
-    remoteSaveInFlight=true;
+    if(!me?.authenticated){if(status)status.textContent="Войдите в аккаунт, чтобы сохранить настройки.";return}
     const response=await authFetch("/api/settings",{
       method:"PUT",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(getRemoteSettingsPayload())
     });
-    if(!response.ok)console.warn("API settings save failed:",response.status);
+    if(!response.ok){console.warn("API settings save failed:",response.status);if(status)status.textContent="Не удалось сохранить. Повторите попытку."}
+    else if(status)status.textContent="Сохранено в аккаунте и доступно в редакторе КП.";
   }catch(error){
     console.warn("API settings save failed:",error);
+    if(status)status.textContent="Нет связи с сервером. Настройки сохранены в этом браузере.";
   }finally{
     remoteSaveInFlight=false;
+    if(remoteSaveQueued){remoteSaveQueued=false;saveRemoteSettingsDebounced()}
   }
 }
 function escapeHtml(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
@@ -231,7 +239,7 @@ function safeColor(v,fallback){return /^#[0-9a-fA-F]{6}$/.test(String(v||""))?St
 function docxColor(v,fallback="000000"){return safeColor(v,"#"+fallback).slice(1).toUpperCase()}
 function siteLabel(v){return String(v||"").replace(/^https?:\/\//,"").replace(/\/$/,"")}
 function applyBranding(){document.documentElement.style.setProperty("--orange",safeColor(state.primaryColor,DEFAULT_BRANDING.primaryColor));document.documentElement.style.setProperty("--header-color",safeColor(state.headerColor,DEFAULT_BRANDING.headerColor));document.documentElement.style.setProperty("--footer-color",safeColor(state.footerColor,DEFAULT_BRANDING.footerColor));document.documentElement.style.setProperty("--price-comment-color",safeColor(state.priceCommentColor,DEFAULT_BRANDING.priceCommentColor))}
-function renderBrandingEditor(){["companyName","companyDescription","companyPhone","companySite","primaryColor","headerColor","footerColor","priceCommentColor"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=state[id]});const p=document.getElementById("companyLogoPreview");if(p){p.src=state.companyLogo||LOGO_DATA;p.style.display="block"}const a=document.getElementById("advantagesEditor");if(a)a.innerHTML=state.advantages.map((x,i)=>`<input type="text" data-advantage-index="${i}" value="${escapeAttr(x)}" placeholder="Преимущество ${i+1}" style="margin-bottom:8px">`).join("")}
+function renderBrandingEditor(){["companyName","companyDescription","companyPhone","companySite","primaryColor","headerColor","footerColor","priceCommentColor","managerName","managerPhone"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=state[id]});const p=document.getElementById("companyLogoPreview");if(p){p.src=state.companyLogo||LOGO_DATA;p.style.display="block"}const a=document.getElementById("advantagesEditor");if(a)a.innerHTML=state.advantages.map((x,i)=>`<input type="text" data-advantage-index="${i}" value="${escapeAttr(x)}" placeholder="Преимущество ${i+1}" style="margin-bottom:8px">`).join("")}
 function bindBrandingEvents(){["companyName","companyDescription","companyPhone","companySite","headerColor","footerColor","priceCommentColor"].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.oninput=()=>{state[id]=el.value;applyBranding();saveState();renderPreview()}});const primary=document.getElementById("primaryColor");if(primary)primary.oninput=()=>{state.primaryColor=primary.value;state.footerColor=primary.value;const footer=document.getElementById("footerColor");if(footer)footer.value=state.footerColor;applyBranding();saveState();renderPreview()};const logo=document.getElementById("companyLogoInput");if(logo)logo.onchange=()=>{const f=logo.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{state.companyLogo=String(r.result||"");saveState();renderBrandingEditor();bindBrandingEvents();renderPreview()};r.readAsDataURL(f)};const advEditor=document.getElementById("advantagesEditor");if(advEditor)advEditor.oninput=e=>{const el=e.target.closest("[data-advantage-index]");if(!el)return;const i=Number(el.dataset.advantageIndex);if(!Number.isInteger(i)||i<0||i>=5)return;if(!Array.isArray(state.advantages)||state.advantages.length!==5)state.advantages=DEFAULT_ADVANTAGES.slice();state.advantages[i]=el.value;saveState();renderPreview()}}
 function formatNumber(v){if(v===""||v==null)return"";const n=Number(v);return Number.isNaN(n)?escapeHtml(v):new Intl.NumberFormat("ru-RU",{maximumFractionDigits:2}).format(n)}
 function currencySymbol(c){return c==="USD"?"$":c==="EUR"?"€":"₽"}
@@ -965,7 +973,9 @@ async function loadRemoteSettings(){
       "primaryColor",
       "headerColor",
       "footerColor",
-      "priceCommentColor"
+      "priceCommentColor",
+      "managerName",
+      "managerPhone"
     ];
 
     const mapping={
@@ -977,7 +987,9 @@ async function loadRemoteSettings(){
       primaryColor:"primary_color",
       headerColor:"header_color",
       footerColor:"footer_color",
-      priceCommentColor:"price_comment_color"
+      priceCommentColor:"price_comment_color",
+      managerName:"manager_name",
+      managerPhone:"manager_phone"
     };
 
     fields.forEach(field=>{
@@ -1218,6 +1230,25 @@ const accountSections={
 };
 function accountCard(key,icon,title,description){return '<a class="account-nav-card" href="#account/'+key+'"><span class="account-card-icon">'+icon+'</span><span class="account-card-title">'+title+'</span><span class="account-card-description">'+description+'</span></a>'}
 function accountHeader(title,subtitle){return '<div class="account-page-top"><div><h1>'+title+'</h1><p class="account-page-subtitle">'+subtitle+'</p></div><span class="account-user-chip">'+accountEscape(currentUser?.email||"")+'</span></div>'}
+function accountSettingsMarkup(){
+  const field=(id,label,value,type="text")=>'<div class="field"><label for="account-'+id+'">'+label+'</label><input type="'+type+'" id="account-'+id+'" value="'+accountEscape(value)+'"></div>';
+  return '<div class="account-company-settings">'+
+    field("companyName","Название компании",state.companyName)+
+    field("companyDescription","Короткое описание компании",state.companyDescription)+
+    '<div class="two-cols">'+field("companyPhone","Телефон компании",state.companyPhone,"tel")+field("companySite","Сайт компании",state.companySite,"url")+'</div>'+
+    '<div class="field"><label for="account-companyLogo">Логотип компании</label><input type="file" id="account-companyLogo" accept="image/*"><img id="account-companyLogoPreview" src="'+accountEscape(state.companyLogo||LOGO_DATA)+'" alt="Логотип компании" style="display:block;max-width:180px;max-height:70px;margin-top:8px;border:1px solid #d9dce1;border-radius:7px;padding:5px;object-fit:contain"></div>'+
+    '<div class="two-cols"><div class="field"><label for="account-primaryColor">Основной цвет КП</label><input type="color" id="account-primaryColor" value="'+safeColor(state.primaryColor,DEFAULT_BRANDING.primaryColor)+'" style="width:48px;height:38px"></div><div class="field"><label for="account-headerColor">Цвет шапки</label><input type="color" id="account-headerColor" value="'+safeColor(state.headerColor,DEFAULT_BRANDING.headerColor)+'" style="width:48px;height:38px"></div><div class="field"><label for="account-footerColor">Цвет футера</label><input type="color" id="account-footerColor" value="'+safeColor(state.footerColor,DEFAULT_BRANDING.footerColor)+'" style="width:48px;height:38px"></div><div class="field"><label for="account-priceCommentColor">Цвет комментария к цене</label><input type="color" id="account-priceCommentColor" value="'+safeColor(state.priceCommentColor,DEFAULT_BRANDING.priceCommentColor)+'" style="width:48px;height:38px"></div></div>'+
+    '<div class="field"><label>Пять преимуществ</label><div id="account-advantagesEditor">'+(Array.isArray(state.advantages)?state.advantages:DEFAULT_ADVANTAGES).slice(0,5).map((value,index)=>'<input type="text" data-account-advantage-index="'+index+'" value="'+accountEscape(value)+'" placeholder="Преимущество '+(index+1)+'" style="margin-bottom:8px">').join("")+'</div></div>'+
+    '<h3>Информация о менеджере</h3><div class="two-cols">'+field("managerName","Имя менеджера",state.managerName)+field("managerPhone","Телефон менеджера",state.managerPhone,"tel")+'</div>'+
+    '<p class="account-info-note" id="accountSettingsSaveStatus" role="status">Настройки сохраняются в аккаунт автоматически и синхронизируются с редактором.</p></div>';
+}
+function bindAccountSettingsEvents(){
+  const fields={companyName:"companyName",companyDescription:"companyDescription",companyPhone:"companyPhone",companySite:"companySite",primaryColor:"primaryColor",headerColor:"headerColor",footerColor:"footerColor",priceCommentColor:"priceCommentColor",managerName:"managerName",managerPhone:"managerPhone"};
+  const sync=(key,value)=>{state[key]=value;if(key==="primaryColor"){state.footerColor=value;const footer=document.getElementById("account-footerColor");if(footer)footer.value=value}saveState();applyBranding();renderBrandingEditor();renderPreview();const status=document.getElementById("accountSettingsSaveStatus");if(status)status.textContent="Сохраняем изменения…"};
+  for(const [id,key] of Object.entries(fields)){const input=document.getElementById("account-"+id);if(input)input.oninput=()=>sync(key,input.value)}
+  const advantages=document.getElementById("account-advantagesEditor");if(advantages)advantages.oninput=event=>{const input=event.target.closest("[data-account-advantage-index]");if(!input)return;const index=Number(input.dataset.accountAdvantageIndex);if(!Number.isInteger(index)||index<0||index>=5)return;if(!Array.isArray(state.advantages)||state.advantages.length!==5)state.advantages=DEFAULT_ADVANTAGES.slice();state.advantages[index]=input.value;saveState();renderPreview();const status=document.getElementById("accountSettingsSaveStatus");if(status)status.textContent="Сохраняем изменения…"};
+  const logo=document.getElementById("account-companyLogo");if(logo)logo.onchange=()=>{const file=logo.files?.[0];if(!file)return;if(file.size>3*1024*1024){alert("Размер логотипа должен быть не больше 3 МБ.");logo.value="";return}const reader=new FileReader();reader.onload=()=>{state.companyLogo=String(reader.result||"");saveState();renderBrandingEditor();const preview=document.getElementById("account-companyLogoPreview");if(preview)preview.src=state.companyLogo;applyBranding();renderPreview();const status=document.getElementById("accountSettingsSaveStatus");if(status)status.textContent="Сохраняем изменения…"};reader.readAsDataURL(file)};
+}
 function renderAccountPage(){
   const isAccountRoute=location.hash==="#account"||location.hash.startsWith("#account/");
   document.querySelector(".app").classList.toggle("account-view",isAccountRoute);
@@ -1263,12 +1294,11 @@ function renderAccountPage(){
   }else if(route==="users"){
     content='<div class="account-info-note">Управление сотрудниками требует серверной модели ролей и прав доступа. Подключим раздел после согласования правил доступа.</div>';
   }else if(route==="settings"){
-    content='<div class="account-info-note">Настройки компании уже доступны в редакторе КП. Откройте их там, чтобы изменить реквизиты и фирменное оформление.</div><button class="btn btn-primary" type="button" id="accountOpenEditorSettings">Открыть настройки в редакторе</button>';
+    content=accountSettingsMarkup();
   }
   accountPageContent.innerHTML='<button class="account-page-back" type="button" id="accountPageBack">← Мой аккаунт</button>'+accountHeader(section.title,section.subtitle)+'<section class="account-panel"><h2>'+section.title+'</h2><p class="account-panel-intro">'+section.subtitle+'</p>'+content+'</section>';
   document.getElementById("accountPageBack").onclick=()=>{location.hash="#account"};
-  const openSettings=document.getElementById("accountOpenEditorSettings");
-  if(openSettings)openSettings.onclick=()=>{location.hash="";setTimeout(()=>document.getElementById("companyName")?.scrollIntoView({behavior:"smooth",block:"start"}),0)};
+  if(route==="settings")bindAccountSettingsEvents();
 }
 async function loadAccountUsage(){
   const target=document.getElementById("accountUsageContent");
