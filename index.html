@@ -95,6 +95,7 @@
   .mobile-actionbar{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
   .mobile-actionbar .btn{min-height:40px}
 }
+.auth-forgot-link,.auth-back-link{display:block;margin:2px 0 10px;padding:0;border:0;background:none;color:var(--orange);font:inherit;font-size:13px;text-align:left;text-decoration:underline;cursor:pointer}.auth-forgot-link[hidden],.auth-back-link[hidden]{display:none}.auth-error.success{color:#16803c}
 </style>
 </head>
 <body>
@@ -107,7 +108,10 @@
     <h2 id="authTitle">Вход</h2>
     <div class="auth-tabs"><button type="button" class="auth-tab active" id="loginTab">Войти</button><button type="button" class="auth-tab" id="registerTab">Регистрация</button></div>
     <div class="field"><label>Email</label><input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com"></div>
-    <div class="field"><label>Пароль</label><input type="password" id="authPassword" autocomplete="current-password" placeholder="Минимум 8 символов"></div>
+    <div class="field" id="authPasswordField"><label id="authPasswordLabel">Пароль</label><input type="password" id="authPassword" autocomplete="current-password" placeholder="Минимум 8 символов"></div>
+    <div class="field" id="authPasswordConfirmField" hidden><label>Повторите новый пароль</label><input type="password" id="authPasswordConfirm" autocomplete="new-password" placeholder="Повторите пароль"></div>
+    <button class="auth-forgot-link" id="authForgotLink" type="button">Забыли пароль?</button>
+    <button class="auth-back-link" id="authBackLink" type="button" hidden>← Вернуться ко входу</button>
     <div class="auth-error" id="authError"></div>
     <button class="btn btn-primary auth-submit" id="authSubmit" type="button">Войти</button>
   </div>
@@ -1022,6 +1026,13 @@ const loginTab=document.getElementById("loginTab");
 const registerTab=document.getElementById("registerTab");
 const authEmail=document.getElementById("authEmail");
 const authPassword=document.getElementById("authPassword");
+const authPasswordField=document.getElementById("authPasswordField");
+const authPasswordConfirm=document.getElementById("authPasswordConfirm");
+const authPasswordConfirmField=document.getElementById("authPasswordConfirmField");
+const authPasswordLabel=document.getElementById("authPasswordLabel");
+const authForgotLink=document.getElementById("authForgotLink");
+const authBackLink=document.getElementById("authBackLink");
+const authTabs=document.querySelector(".auth-tabs");
 const authError=document.getElementById("authError");
 const authSubmit=document.getElementById("authSubmit");
 const accountBtn=document.getElementById("accountBtn");
@@ -1038,6 +1049,7 @@ const accountProfileBtn=document.getElementById("accountProfileBtn");
 const accountLogoutBtn=document.getElementById("accountLogoutBtn");
 let authMode="login";
 let currentUser=null;
+let passwordResetToken=null;
 
 function openAuthModal(mode="login"){
   authMode=mode;
@@ -1051,17 +1063,30 @@ function closeAuthModal(){authModal.hidden=true}
 function setAuthMode(mode){
   authMode=mode;
   const register=mode==="register";
-  authTitle.textContent=register?"Регистрация":"Вход";
-  authSubmit.textContent=register?"Зарегистрироваться":"Войти";
-  loginTab.classList.toggle("active",!register);
+  const forgot=mode==="forgot";
+  const reset=mode==="reset";
+  const login=mode==="login";
+  authTitle.textContent=register?"Регистрация":forgot?"Восстановление пароля":reset?"Новый пароль":"Вход";
+  authSubmit.textContent=register?"Зарегистрироваться":forgot?"Отправить ссылку":reset?"Сохранить новый пароль":"Войти";
+  authTabs.hidden=forgot||reset;
+  authPasswordLabel.textContent=reset?"Новый пароль":"Пароль";
+  authPasswordField.hidden=forgot;
+  authPasswordConfirmField.hidden=!reset;
+  authForgotLink.hidden=!login;
+  authBackLink.hidden=!(forgot||reset);
+  loginTab.classList.toggle("active",login);
   registerTab.classList.toggle("active",register);
-  authPassword.autocomplete=register?"new-password":"current-password";
+  authPassword.autocomplete=register||reset?"new-password":"current-password";
+  authPasswordConfirm.value="";
+  authError.classList.remove("success");
   authError.textContent="";
 }
 function authErrorText(error){
   const map={
     invalid_email:"Введите корректный email.",
     password_too_short:"Пароль должен содержать минимум 8 символов.",
+    password_too_long:"Пароль должен быть не длиннее 128 символов.",
+    invalid_or_expired_reset_link:"Ссылка недействительна или срок её действия истёк. Запросите новую ссылку.",
     email_already_registered:"Этот email уже зарегистрирован.",
     invalid_credentials:"Неверный email или пароль.",
     login_lookup_error:"Сервер не смог прочитать данные аккаунта. Попробуйте ещё раз и сообщите этот код: login_lookup_error.",
@@ -1075,10 +1100,37 @@ async function authRequest(path){
   const email=authEmail.value.trim();
   const password=authPassword.value;
   authError.textContent="";
-  if(!email)return authError.textContent="Введите email.";
-  if(password.length<8)return authError.textContent="Пароль должен содержать минимум 8 символов.";
+  if(authMode!=="reset"&&!email)return authError.textContent="Введите email.";
+  if(authMode==="reset"){
+    if(password.length<8)return authError.textContent=authErrorText("password_too_short");
+    if(password.length>128)return authError.textContent=authErrorText("password_too_long");
+    if(password!==authPasswordConfirm.value)return authError.textContent="Пароли не совпадают.";
+  }else if(authMode!=="forgot"&&password.length<8)return authError.textContent=authErrorText("password_too_short");
   authSubmit.disabled=true;
   try{
+    if(authMode==="forgot"){
+      const response=await authFetch("/api/password-reset/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok||!result.ok)throw new Error(result.error||"request_failed");
+      authError.classList.add("success");
+      authError.textContent=result.message||"Если аккаунт существует, письмо отправлено.";
+      return;
+    }
+    if(authMode==="reset"){
+      const response=await authFetch("/api/password-reset/confirm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:passwordResetToken,password})});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok||!result.ok)throw new Error(result.error||"request_failed");
+      passwordResetToken=null;
+      setAuthToken("");
+      currentUser=null;
+      updateAuthUI();
+      renderAccountPage();
+      setAuthMode("login");
+      authError.classList.add("success");
+      authError.textContent="Пароль изменён. Теперь войдите с новым паролем.";
+      authPassword.value="";
+      return;
+    }
     const response=await authFetch(path,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
@@ -1150,6 +1202,8 @@ authBtn.onclick=async()=>{
 };
 loginTab.onclick=()=>setAuthMode("login");
 registerTab.onclick=()=>setAuthMode("register");
+authForgotLink.onclick=()=>setAuthMode("forgot");
+authBackLink.onclick=()=>setAuthMode("login");
 authSubmit.onclick=()=>authRequest(authMode==="register"?"/api/register":"/api/login");
 authClose.onclick=closeAuthModal;
 authBackdrop.onclick=closeAuthModal;
@@ -1275,7 +1329,15 @@ mobileModeToggle.onclick=()=>{
 };
 document.getElementById("mobilePdfBtn").onclick=()=>document.getElementById("downloadPdfBtn").click();
 document.getElementById("mobileDocxBtn").onclick=()=>document.getElementById("downloadDocxBtn").click();
-init().then(renderAccountPage);
+init().then(()=>{
+  renderAccountPage();
+  const resetMatch=location.hash.match(/^#password-reset=([a-f0-9]{64})$/i);
+  if(resetMatch){
+    passwordResetToken=resetMatch[1];
+    history.replaceState(null,"",location.pathname+location.search);
+    openAuthModal("reset");
+  }
+});
 </script>
 </body>
 </html>
